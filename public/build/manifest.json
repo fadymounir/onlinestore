@@ -1,0 +1,45 @@
+{
+  "_cairo-400-normal-Dh7otpdh.woff2": {
+    "file": "assets/cairo-400-normal-Dh7otpdh.woff2",
+    "src": "_cairo-400-normal-Dh7otpdh.woff2"
+  },
+  "_cairo-400-normal-b1R3q6Pf.woff": {
+    "file": "assets/cairo-400-normal-b1R3q6Pf.woff",
+    "src": "_cairo-400-normal-b1R3q6Pf.woff"
+  },
+  "_cairo-500-normal-D-WQsSKQ.woff2": {
+    "file": "assets/cairo-500-normal-D-WQsSKQ.woff2",
+    "src": "_cairo-500-normal-D-WQsSKQ.woff2"
+  },
+  "_cairo-500-normal-DkdkMETP.woff": {
+    "file": "assets/cairo-500-normal-DkdkMETP.woff",
+    "src": "_cairo-500-normal-DkdkMETP.woff"
+  },
+  "_cairo-600-normal-buYOP1M3.woff": {
+    "file": "assets/cairo-600-normal-buYOP1M3.woff",
+    "src": "_cairo-600-normal-buYOP1M3.woff"
+  },
+  "_cairo-600-normal-mGS0uvCM.woff2": {
+    "file": "assets/cairo-600-normal-mGS0uvCM.woff2",
+    "src": "_cairo-600-normal-mGS0uvCM.woff2"
+  },
+  "_fonts-DYZ2rhZe.css": {
+    "file": "assets/fonts-DYZ2rhZe.css",
+    "src": "_fonts-DYZ2rhZe.css"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-CsUpQNou.css",
+    "name": "app",
+    "names": [
+      "app.css"
+    ],
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-BvRk9kiK.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  }
+}

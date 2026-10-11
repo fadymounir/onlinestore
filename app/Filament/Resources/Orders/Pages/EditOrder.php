@@ -1,0 +1,25 @@
+<?php
+
+namespace App\Filament\Resources\Orders\Pages;
+
+use App\Filament\Resources\Orders\OrderResource;
+use Filament\Actions\ViewAction;
+use Filament\Resources\Pages\EditRecord;
+
+class EditOrder extends EditRecord
+{
+    protected static string $resource = OrderResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        // No DeleteAction: an order is a financial record.
+        return [
+            ViewAction::make(),
+        ];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return static::getResource()::getUrl('view', ['record' => $this->record]);
+    }
+}
