@@ -22,13 +22,10 @@ class ShareStorefrontData
         View::share([
             // Queried per request rather than cached: Laravel 13 ships
             // cache.serializable_classes => false, so caching Eloquent models
-            // returns __PHP_Incomplete_Class. Two eager-loaded queries are
-            // cheaper than weakening that hardening.
-            'navCategories' => Category::active()
-                ->roots()
-                ->with(['children' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')])
-                ->orderBy('sort_order')
-                ->get(),
+            // returns __PHP_Incomplete_Class. One query is cheaper than
+            // weakening that hardening — the nested set comes back flat and is
+            // linked into a tree in memory, so depth costs nothing extra.
+            'navCategories' => Category::tree(onlyActive: true),
             'cartCount' => app(CartService::class)->count(),
             'storeName' => Setting::get('store_name', config('app.name')),
             'storeTagline' => Setting::get('store_tagline', ''),

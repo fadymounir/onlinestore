@@ -11,18 +11,92 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use App\Support\VariantMatrix;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 class ClothingCatalogSeeder extends Seeder
 {
-    /** parent => [children] */
+    /**
+     * The category tree, nested as deeply as you like: name => [children].
+     * A leaf is an empty array. Four levels here, to exercise the mega menu.
+     */
     private const CATEGORIES = [
-        'ملابس حريمي' => ['فساتين', 'بلوزات وقمصان', 'بناطيل وجيبات', 'عبايات وقفاطين'],
-        'ملابس رجالي' => ['قمصان', 'تيشيرتات وبولو', 'بناطيل وجينز', 'جاكيتات وبلوفرات'],
-        'ملابس أطفال' => ['ملابس أولاد', 'ملابس بنات'],
-        'أحذية' => ['أحذية حريمي', 'أحذية رجالي'],
+        'ملابس حريمي' => [
+            'فساتين' => [
+                'فساتين سواريه' => [
+                    'سواريه طويل' => [],
+                    'سواريه قصير' => [],
+                ],
+                'فساتين كاجوال' => [],
+            ],
+            'بلوزات وقمصان' => [],
+            'بناطيل وجيبات' => [],
+            'عبايات وقفاطين' => [],
+        ],
+        'ملابس رجالي' => [
+            'قمصان' => [],
+            'تيشيرتات وبولو' => [],
+            'بناطيل وجينز' => [],
+            'جاكيتات وبلوفرات' => [],
+        ],
+        'ملابس أطفال' => [
+            'ملابس أولاد' => [],
+            'ملابس بنات' => [],
+        ],
+        'أحذية' => [
+            'أحذية حريمي' => [
+                'كعب عالي' => [],
+                'باليرينا وفلات' => [],
+            ],
+            'أحذية رجالي' => [
+                'أحذية كلاسيك' => [],
+                'سنيكرز' => [],
+            ],
+        ],
         'حجاب وطرح' => [],
-        'شنط وإكسسوارات' => ['شنط يد', 'أحزمة وكوفيات'],
+        'شنط وإكسسوارات' => [
+            'شنط يد' => [],
+            'أحزمة وكوفيات' => [],
+        ],
+    ];
+
+    /**
+     * Category name => curated Unsplash photo ids, best first.
+     *
+     * Hand-picked rather than keyword-searched: open image APIs return
+     * whatever matches the word, which for a clothing shop means the odd
+     * museum exhibit or holiday snap. The first id is the category's own
+     * image; products in that category cycle through the rest.
+     */
+    private const CATEGORY_PHOTOS = [
+        'ملابس حريمي' => ['photo-1623609163859-ca93c959b98a', 'photo-1490481651871-ab68de25d43d', 'photo-1567401893414-76b7b1e5a7a5', 'photo-1532453288672-3a27e9be9efd'],
+        'فساتين' => ['flagged/photo-1585052201332-b8c0ce30972f', 'photo-1612336307429-8a898d10e223', 'photo-1550639525-c97d455acf70', 'photo-1595777457583-95e059d581b8', 'photo-1618932260643-eee4a2f652a6'],
+        'فساتين سواريه' => ['photo-1623580674393-edf6eb7090f8', 'photo-1610209740880-6ecc4b20ea78', 'photo-1547697933-66bcb20f114a'],
+        'سواريه طويل' => ['photo-1763959952596-1512ebea8eb1', 'photo-1775036190849-16ef6dc9519e', 'photo-1710023141893-5ccbe1c4ae6d'],
+        'سواريه قصير' => ['photo-1583039949165-96ee24b0d8de', 'photo-1568251188392-ae32f898cb3b', 'photo-1746025241709-0fb2528687e2', 'photo-1568252542512-9fe8fe9c87bb'],
+        'فساتين كاجوال' => ['photo-1617258856138-402b60da4e2a', 'photo-1610048616025-11a3dcc9fd0b', 'photo-1682183948920-16d882bd786d', 'photo-1539008835657-9e8e9680c956'],
+        'بلوزات وقمصان' => ['photo-1789110521592-044c58391f7f', 'photo-1761117228880-df2425bd70da', 'photo-1611235116156-0cbda6649efb', 'photo-1764337593519-c51a77b4fc3d', 'photo-1613891737415-be7670d21c19'],
+        'بناطيل وجيبات' => ['photo-1552874869-5c39ec9288dc', 'photo-1680690517143-d813ac08cd13', 'photo-1789110520253-7e31dbdd2aad'],
+        'عبايات وقفاطين' => ['photo-1662806407800-56793fa8e924', 'photo-1708151729245-fa18bd75727e', 'photo-1613611927458-3ddd4b0afdb9'],
+        'ملابس رجالي' => ['photo-1624835567150-0c530a20d8cc', 'photo-1642764873654-9eef0467b342', 'photo-1621072156002-e2fccdc0b176'],
+        'قمصان' => ['photo-1602810318383-e386cc2a3ccf', 'photo-1740711152088-88a009e877bb', 'photo-1602810316693-3667c854239a', 'photo-1603252110481-7ba873bf42ab', 'photo-1626557981101-aae6f84aa6ff'],
+        'تيشيرتات وبولو' => ['photo-1562157873-818bc0726f68', 'photo-1529374255404-311a2a4f1fd9', 'photo-1635274605638-d44babc08a4f', 'photo-1716951219353-e4a16dce3186'],
+        'بناطيل وجينز' => ['photo-1602293589930-45aad59ba3ab', 'photo-1714729382668-7bc3bb261662', 'photo-1714143136372-ddaf8b606da7', 'photo-1637069585336-827b298fe84a'],
+        'جاكيتات وبلوفرات' => ['photo-1591047139829-d91aecb6caea', 'photo-1641642231157-0849081598a2', 'photo-1646270968802-6bad28659329', 'photo-1631541909061-71e349d1f203'],
+        'ملابس أطفال' => ['photo-1611708314849-8bb91fe0fa56', 'photo-1607453998825-f3f36da5ab18'],
+        'ملابس أولاد' => ['photo-1758782213532-bbb5fd89885e'],
+        'ملابس بنات' => ['photo-1518831959646-742c3a14ebf7', 'photo-1611708314849-8bb91fe0fa56', 'photo-1607453998825-f3f36da5ab18'],
+        'أحذية' => ['photo-1560769629-975ec94e6a86', 'photo-1608231387042-66d1773070a5', 'photo-1595950653106-6c9ebd614d3a'],
+        'أحذية حريمي' => ['photo-1543163521-1bf539c55dd2', 'photo-1581101767113-1677fc2beaa8', 'photo-1590099033615-be195f8d575c', 'photo-1562687848-c1664eff566d'],
+        'كعب عالي' => ['photo-1535043934128-cf0b28d52f95', 'photo-1518049362265-d5b2a6467637', 'photo-1562687848-c1664eff566d', 'photo-1581101767113-1677fc2beaa8'],
+        'باليرينا وفلات' => ['photo-1758542988664-49951c5b1999', 'photo-1769981654964-e65981aecd75', 'photo-1712512343634-f64161d3daa6', 'photo-1775297832774-9eb647970c68'],
+        'أحذية رجالي' => ['photo-1614252235316-8c857d38b5f4', 'photo-1603191659812-ee978eeeef76', 'photo-1549290127-7f758fdadff7', 'photo-1563434564528-8fdf5996e622'],
+        'أحذية كلاسيك' => ['photo-1571859856639-d54ab2c18ba0', 'photo-1625357165350-bdbcb6d7d524', 'photo-1563433337461-5b65f0834f3a', 'photo-1614253429340-98120bd6d753'],
+        'سنيكرز' => ['photo-1595950653106-6c9ebd614d3a', 'photo-1608231387042-66d1773070a5', 'photo-1560769629-975ec94e6a86'],
+        'حجاب وطرح' => ['photo-1585728748176-455ac5eed962', 'photo-1614177919002-8b868f0ac5bb', 'photo-1613447895817-e617a4093f50'],
+        'شنط وإكسسوارات' => ['photo-1598532163257-ae3c6b2524b6', 'photo-1590874103328-eac38a683ce7', 'photo-1605733513597-a8f8341084e6', 'photo-1559563458-527698bf5295'],
+        'شنط يد' => ['photo-1584917865442-de89df76afd3', 'photo-1600857062241-98e5dba7f214', 'photo-1566150905458-1bf1fc113f0d', 'photo-1705909237050-7a7625b47fac'],
+        'أحزمة وكوفيات' => ['photo-1711443982852-b3df5c563448', 'photo-1624222247344-550fb60583dc', 'photo-1705493655920-20c572928501', 'photo-1664286074176-5206ee5dc878'],
     ];
 
     private const BRANDS = [
@@ -35,9 +109,9 @@ class ClothingCatalogSeeder extends Seeder
      * kind: apparel = لون×مقاس · shoes = لون×مقاس حذاء · single = لون فقط
      */
     private const PRODUCTS = [
-        ['فساتين', 'فستان سواريه مطرز بالترتر', 1850, 2400, 'apparel', true],
-        ['فساتين', 'فستان كاجوال قطن مشجر', 650, 820, 'apparel', false],
-        ['فساتين', 'فستان سهرة مخمل طويل', 2200, null, 'apparel', true],
+        ['سواريه طويل', 'فستان سواريه مطرز بالترتر', 1850, 2400, 'apparel', true],
+        ['فساتين كاجوال', 'فستان كاجوال قطن مشجر', 650, 820, 'apparel', false],
+        ['سواريه قصير', 'فستان سهرة مخمل طويل', 2200, null, 'apparel', true],
         ['بلوزات وقمصان', 'بلوزة شيفون بأكمام واسعة', 420, 560, 'apparel', false],
         ['بلوزات وقمصان', 'قميص كتان سادة', 540, null, 'apparel', false],
         ['بناطيل وجيبات', 'بنطلون جينز عالي الخصر', 720, 900, 'apparel', true],
@@ -57,10 +131,10 @@ class ClothingCatalogSeeder extends Seeder
         ['ملابس أولاد', 'طقم أولاد تيشيرت وشورت', 360, 450, 'apparel', false],
         ['ملابس بنات', 'فستان بنات مناسبات', 520, null, 'apparel', true],
 
-        ['أحذية حريمي', 'حذاء كعب عالي جلد', 1150, 1450, 'shoes', true],
-        ['أحذية حريمي', 'باليرينا جلد طبيعي', 680, null, 'shoes', false],
-        ['أحذية رجالي', 'حذاء كلاسيك جلد طبيعي', 1480, 1850, 'shoes', true],
-        ['أحذية رجالي', 'سنيكرز رياضي مريح', 920, null, 'shoes', false],
+        ['كعب عالي', 'حذاء كعب عالي جلد', 1150, 1450, 'shoes', true],
+        ['باليرينا وفلات', 'باليرينا جلد طبيعي', 680, null, 'shoes', false],
+        ['أحذية كلاسيك', 'حذاء كلاسيك جلد طبيعي', 1480, 1850, 'shoes', true],
+        ['سنيكرز', 'سنيكرز رياضي مريح', 920, null, 'shoes', false],
 
         ['حجاب وطرح', 'طرحة شيفون سادة', 120, 160, 'single', false],
         ['حجاب وطرح', 'إيشارب حرير مطبوع', 260, null, 'single', false],
@@ -148,26 +222,27 @@ class ClothingCatalogSeeder extends Seeder
         $map = [];
         $order = 0;
 
-        foreach (self::CATEGORIES as $parentName => $children) {
-            $parent = Category::updateOrCreate(
-                ['slug' => 'cat-'.++$order],
-                ['name' => $parentName, 'parent_id' => null, 'sort_order' => $order, 'is_active' => true],
-            );
-            $map[$parentName] = $parent;
-
-            foreach ($children as $childName) {
-                $child = Category::updateOrCreate(
+        $seed = function (array $nodes, ?Category $parent) use (&$seed, &$map, &$order): void {
+            foreach ($nodes as $name => $children) {
+                $category = Category::updateOrCreate(
                     ['slug' => 'cat-'.++$order],
-                    [
-                        'name' => $childName,
-                        'parent_id' => $parent->id,
-                        'sort_order' => $order,
-                        'is_active' => true,
-                    ],
+                    ['name' => $name, 'is_active' => true],
                 );
-                $map[$childName] = $child;
+
+                // parent_id is a nested-set move: assigning it appends the node
+                // under its parent (or makes it a root) and fixes _lft/_rgt.
+                $category->parent_id = $parent?->getKey();
+                $category->save();
+
+                $this->seedCategoryImage($category, $order);
+
+                $map[$name] = $category;
+
+                $seed($children, $category);
             }
-        }
+        };
+
+        $seed(self::CATEGORIES, null);
 
         return $map;
     }
@@ -218,48 +293,37 @@ class ClothingCatalogSeeder extends Seeder
     }
 
     /**
-     * Writes real JPEGs so the panel and the storefront show actual images
-     * instead of broken thumbnails. GD is compiled into the app image.
+     * Two real photographs per product, drawn from its category's photo pool
+     * so the shot matches what is being sold. Falls back to a generated
+     * swatch when the pool is empty or the download fails.
      */
     private function seedImages(Product $product, int $index): void
     {
-        $palette = [
-            [206, 161, 123], [120, 134, 158], [168, 120, 128], [112, 142, 128],
-            [148, 136, 170], [190, 168, 120], [130, 130, 142], [172, 142, 122],
-        ];
-
         $disk = Storage::disk('public');
+        $pool = self::CATEGORY_PHOTOS[$product->category->name] ?? [];
 
         foreach (range(0, 1) as $n) {
             $path = "products/demo-{$product->id}-{$n}.jpg";
 
-            if (! $disk->exists($path)) {
-                [$r, $g, $b] = $palette[($index + $n) % count($palette)];
-
-                $image = imagecreatetruecolor(900, 1200);
-
-                // Soft vertical gradient — enough to read as a product card.
-                for ($y = 0; $y < 1200; $y++) {
-                    $shade = 1 - ($y / 1200) * 0.35;
-                    $line = imagecolorallocate(
-                        $image,
-                        (int) ($r * $shade),
-                        (int) ($g * $shade),
-                        (int) ($b * $shade),
-                    );
-                    imageline($image, 0, $y, 900, $y, $line);
-                }
-
-                ob_start();
-                imagejpeg($image, null, 82);
-                $binary = ob_get_clean();
-                imagedestroy($image);
-
-                $disk->put($path, $binary);
+            if ($disk->exists($path)) {
+                continue;
             }
 
+            // Skip index 0 — that one is the category's own image — and walk
+            // the pool so neighbouring products don't repeat a shot.
+            $photo = $pool === []
+                ? null
+                : $pool[(($index * 2) + $n) % max(count($pool) - 1, 1) + 1] ?? $pool[0];
+
+            $binary = ($photo ? $this->fetchUnsplashPhoto($photo, 900, 1200) : null)
+                ?? $this->gradientJpeg($index + $n, 900, 1200);
+
+            $disk->put($path, $binary);
+        }
+
+        foreach (range(0, 1) as $n) {
             ProductImage::updateOrCreate(
-                ['product_id' => $product->id, 'path' => $path],
+                ['product_id' => $product->id, 'path' => "products/demo-{$product->id}-{$n}.jpg"],
                 [
                     'alt' => $product->name,
                     'sort_order' => $n,
@@ -267,5 +331,132 @@ class ClothingCatalogSeeder extends Seeder
                 ],
             );
         }
+    }
+
+    /**
+     * Give each category a real photograph to show in the mega menu.
+     *
+     * Cropped to a uniform 800x600 so the menu tiles line up. Already
+     * downloaded files are reused, and a failed download falls back to a
+     * generated swatch so seeding still completes offline.
+     */
+    private function seedCategoryImage(Category $category, int $index): void
+    {
+        $disk = Storage::disk('public');
+        $path = "categories/{$category->slug}.jpg";
+
+        if (! $disk->exists($path)) {
+            $photo = self::CATEGORY_PHOTOS[$category->name][0] ?? null;
+
+            $binary = ($photo ? $this->fetchUnsplashPhoto($photo, 800, 600) : null)
+                ?? $this->gradientJpeg($index, 800, 600);
+
+            $disk->put($path, $binary);
+        }
+
+        if ($category->image !== $path) {
+            // Quietly: `image` is not a tree move, and saveQuietly keeps the
+            // nested-set hooks out of a plain column update.
+            $category->forceFill(['image' => $path])->saveQuietly();
+        }
+    }
+
+    /** One Unsplash photo, centre-cropped to $width x $height, or null. */
+    private function fetchUnsplashPhoto(string $photo, int $width, int $height): ?string
+    {
+        try {
+            // Straight to the image CDN: the unsplash.com/photos/{id}/download
+            // redirect lands here anyway, and skipping it saves a round trip
+            // and a second hostname to resolve.
+            $response = Http::withUserAgent('onlineStore-seeder/1.0')
+                ->timeout(30)
+                ->retry(2, 750)
+                ->get("https://images.unsplash.com/{$photo}", [
+                    'w' => $width,
+                    'h' => $height,
+                    'fit' => 'crop',
+                    'fm' => 'jpg',
+                    'q' => 85,
+                ]);
+
+            return $response->successful()
+                ? $this->cropToFill($response->body(), $width, $height)
+                : null;
+        } catch (\Throwable) {
+            // Offline or rate limited: the caller falls back to a swatch
+            // rather than failing the whole seed.
+            return null;
+        }
+    }
+
+    /** Centre-crop and resize to exactly $width x $height. */
+    private function cropToFill(string $binary, int $width, int $height): ?string
+    {
+        $source = @imagecreatefromstring($binary);
+
+        if ($source === false) {
+            return null;
+        }
+
+        $sourceWidth = imagesx($source);
+        $sourceHeight = imagesy($source);
+
+        // Scale so the shorter side fills, then take the middle of the longer.
+        $scale = max($width / $sourceWidth, $height / $sourceHeight);
+        $cropWidth = (int) round($width / $scale);
+        $cropHeight = (int) round($height / $scale);
+
+        $canvas = imagecreatetruecolor($width, $height);
+
+        imagecopyresampled(
+            $canvas,
+            $source,
+            0, 0,
+            (int) round(($sourceWidth - $cropWidth) / 2),
+            (int) round(($sourceHeight - $cropHeight) / 2),
+            $width, $height,
+            $cropWidth, $cropHeight,
+        );
+
+        ob_start();
+        imagejpeg($canvas, null, 85);
+        $jpeg = ob_get_clean();
+
+        imagedestroy($canvas);
+        imagedestroy($source);
+
+        return $jpeg;
+    }
+
+    /** Soft vertical gradient — the offline stand-in for a real photo. */
+    private function gradientJpeg(int $index, int $width, int $height): string
+    {
+        $palette = [
+            [206, 161, 123], [120, 134, 158], [168, 120, 128], [112, 142, 128],
+            [148, 136, 170], [190, 168, 120], [130, 130, 142], [172, 142, 122],
+        ];
+
+        [$r, $g, $b] = $palette[$index % count($palette)];
+
+        $image = imagecreatetruecolor($width, $height);
+
+        for ($y = 0; $y < $height; $y++) {
+            $shade = 1 - ($y / $height) * 0.35;
+            $line = imagecolorallocate(
+                $image,
+                (int) ($r * $shade),
+                (int) ($g * $shade),
+                (int) ($b * $shade),
+            );
+            imageline($image, 0, $y, $width, $y, $line);
+        }
+
+        ob_start();
+        imagejpeg($image, null, 82);
+        $jpeg = ob_get_clean();
+
+        imagedestroy($image);
+
+        return $jpeg;
     }
 }

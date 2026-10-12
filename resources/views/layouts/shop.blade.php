@@ -91,42 +91,9 @@
         </nav>
     </div>
 
-    {{-- category nav --}}
-    <div class="border-t border-stone-100 bg-white">
-        <div class="mx-auto max-w-7xl overflow-x-auto px-4">
-            <ul class="flex items-stretch gap-1 whitespace-nowrap text-sm">
-                <li>
-                    <a href="{{ route('catalog') }}"
-                       class="block px-3 py-3 font-medium text-stone-700 hover:text-amber-700">كل المنتجات</a>
-                </li>
-                @foreach ($navCategories as $cat)
-                    <li class="group relative">
-                        <a href="{{ route('category', $cat) }}"
-                           class="flex items-center gap-1 px-3 py-3 font-medium text-stone-700 hover:text-amber-700">
-                            {{ $cat->name }}
-                            @if ($cat->children->isNotEmpty())
-                                <svg class="size-3.5 text-stone-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
-                                </svg>
-                            @endif
-                        </a>
-                        @if ($cat->children->isNotEmpty())
-                            <ul class="invisible absolute start-0 z-40 w-52 rounded-xl border border-stone-200 bg-white p-2 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100">
-                                @foreach ($cat->children as $child)
-                                    <li>
-                                        <a href="{{ route('category', $child) }}"
-                                           class="block rounded-lg px-3 py-2 text-stone-700 hover:bg-stone-100 hover:text-amber-700">
-                                            {{ $child->name }}
-                                        </a>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        @endif
-                    </li>
-                @endforeach
-            </ul>
-        </div>
-    </div>
+    {{-- category nav: full tree, any depth --}}
+    <x-mega-menu :categories="$navCategories" />
+
 </header>
 
 {{-- mobile search --}}

@@ -12,7 +12,7 @@ class HomeController extends Controller
     public function __invoke(): View
     {
         return view('shop.home', [
-            'categories' => Category::active()->roots()->with('children')->orderBy('sort_order')->get(),
+            'categories' => Category::tree(onlyActive: true),
             'featured' => Product::published()
                 ->where('is_featured', true)
                 ->with('primaryImage', 'brand', 'variants')

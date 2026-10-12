@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,8 +16,9 @@ class CatalogController extends Controller
     {
         return view('shop.catalog', [
             'category' => null,
+            'ancestors' => collect(),
             'products' => $this->query($request)->paginate(12)->withQueryString(),
-            'categories' => Category::active()->roots()->with('children')->orderBy('sort_order')->get(),
+            'categories' => Category::tree(onlyActive: true),
             'brands' => Brand::active()->orderBy('name')->get(),
             'heading' => $request->filled('q')
                 ? 'نتائج البحث عن: '.$request->string('q')
@@ -30,16 +30,20 @@ class CatalogController extends Controller
     {
         abort_unless($category->is_active, 404);
 
-        // A parent category shows everything beneath it, not an empty page.
-        $ids = [$category->id, ...$category->children()->pluck('id')->all()];
+        // A switched-off branch is hidden whole, so a category under an
+        // inactive ancestor is not reachable either.
+        abort_if($category->ancestors()->where('is_active', false)->exists(), 404);
 
         return view('shop.catalog', [
             'category' => $category,
+            'ancestors' => $category->ancestors()->defaultOrder()->get(),
             'products' => $this->query($request)
-                ->whereIn('category_id', $ids)
+                // A branch shows everything beneath it, at any depth, not an
+                // empty page — one nested-set query covers the whole subtree.
+                ->whereIn('category_id', $category->subtreeIds())
                 ->paginate(12)
                 ->withQueryString(),
-            'categories' => Category::active()->roots()->with('children')->orderBy('sort_order')->get(),
+            'categories' => Category::tree(onlyActive: true),
             'brands' => Brand::active()->orderBy('name')->get(),
             'heading' => $category->name,
         ]);

@@ -5,10 +5,10 @@
 @section('content')
     <nav class="mb-4 flex flex-wrap items-center gap-2 text-sm text-stone-500">
         <a href="{{ route('home') }}" class="hover:text-amber-700">الرئيسية</a>
-        @if ($category?->parent)
+        @foreach ($ancestors as $ancestor)
             <span>/</span>
-            <a href="{{ route('category', $category->parent) }}" class="hover:text-amber-700">{{ $category->parent->name }}</a>
-        @endif
+            <a href="{{ route('category', $ancestor) }}" class="hover:text-amber-700">{{ $ancestor->name }}</a>
+        @endforeach
         <span>/</span>
         <span class="text-stone-900">{{ $heading }}</span>
     </nav>
@@ -34,6 +34,19 @@
             </select>
         </form>
     </div>
+
+    {{-- direct subcategories, so a branch page can be drilled into --}}
+    @if ($category && $category->children->isNotEmpty())
+        <div class="mb-6 flex flex-wrap gap-2">
+            @foreach ($category->children->where('is_active', true) as $child)
+                <a href="{{ route('category', $child) }}"
+                   class="rounded-full border border-stone-300 bg-white px-3.5 py-1.5 text-sm text-stone-700
+                          hover:border-amber-600 hover:text-amber-700">
+                    {{ $child->name }}
+                </a>
+            @endforeach
+        </div>
+    @endif
 
     <div class="grid gap-8 lg:grid-cols-[260px_1fr]">
         {{-- filters --}}

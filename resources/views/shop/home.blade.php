@@ -25,15 +25,24 @@
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
                 @foreach ($categories as $category)
                     <a href="{{ route('category', $category) }}"
-                       class="group rounded-2xl border border-stone-200 bg-white p-5 text-center transition hover:border-amber-300 hover:bg-amber-50">
-                        <span class="block text-sm font-semibold text-stone-900 group-hover:text-amber-800">
-                            {{ $category->name }}
+                       class="group overflow-hidden rounded-2xl border border-stone-200 bg-white text-center transition hover:border-amber-300">
+                        <span class="block aspect-[4/3] overflow-hidden bg-stone-100">
+                            @if ($category->image)
+                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($category->image) }}"
+                                     alt="{{ $category->name }}" loading="lazy"
+                                     class="size-full object-cover transition duration-300 group-hover:scale-105">
+                            @endif
                         </span>
-                        @if ($category->children->isNotEmpty())
-                            <span class="mt-1 block text-[11px] text-stone-500">
-                                {{ $category->children->count() }} قسم فرعي
+                        <span class="block p-4">
+                            <span class="block text-sm font-semibold text-stone-900 group-hover:text-amber-800">
+                                {{ $category->name }}
                             </span>
-                        @endif
+                            @if ($category->children->isNotEmpty())
+                                <span class="mt-1 block text-[11px] text-stone-500">
+                                    {{ $category->children->count() }} قسم فرعي
+                                </span>
+                            @endif
+                        </span>
                     </a>
                 @endforeach
             </div>

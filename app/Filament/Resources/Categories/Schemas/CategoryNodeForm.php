@@ -4,22 +4,23 @@ namespace App\Filament\Resources\Categories\Schemas;
 
 use App\Models\Category;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Component;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Support\Str;
 
 /**
  * Fields for the quick create/edit modals on the category tree page.
  *
- * The parent is never a field here: on the tree, position is set by the node
- * you clicked "add" on, or by the dedicated "move" action.
+ * The parent is never a field here: on the tree, position comes from the node
+ * whose "add" button was clicked, or from the dedicated "move" action.
  */
 class CategoryNodeForm
 {
-    /** @return array<int, \Filament\Schemas\Components\Component> */
+    /** @return array<int, Component> */
     public static function fields(): array
     {
         return [
@@ -28,8 +29,10 @@ class CategoryNodeForm
                 ->required()
                 ->maxLength(255)
                 ->live(onBlur: true)
-                ->afterStateUpdated(function (string $operation, ?string $state, Set $set): void {
-                    if ($operation !== 'edit' && filled($state)) {
+                ->afterStateUpdated(function (?string $state, Get $get, Set $set): void {
+                    // Only ever fills a blank slug, so an edited one is never
+                    // overwritten and existing links keep working.
+                    if (filled($state) && blank($get('slug'))) {
                         $set('slug', Str::slug($state));
                     }
                 }),
@@ -39,12 +42,8 @@ class CategoryNodeForm
                 ->required()
                 ->maxLength(255)
                 ->rules(['regex:/^[a-z0-9-]+$/'])
-                ->unique(
-                    table: Category::class,
-                    column: 'slug',
-                    ignoreRecord: true,
-                )
-                ->helperText('يظهر في رابط الصفحة: /category/السلاج'),
+                ->unique(table: Category::class, column: 'slug', ignoreRecord: true)
+                ->helperText('يظهر في رابط الصفحة: /category/slug'),
 
             Textarea::make('description')
                 ->label('الوصف')
@@ -65,30 +64,25 @@ class CategoryNodeForm
     }
 
     /**
-     * Flat tree as select options, each label indented by its depth so the
+     * The tree as select options, each label indented by its depth so the
      * hierarchy stays readable in a plain dropdown.
      *
-     * @param  array<int, int>  $exclude
+     * A nested set comes back in pre-order, so one flat query is already in
+     * tree order — no recursion needed here.
+     *
+     * @param  array<int, int>  $exclude  ids to leave out, subtrees included
      * @return array<int, string>
      */
     public static function parentOptions(array $exclude = []): array
     {
-        $options = [];
-
-        $walk = function (iterable $nodes) use (&$walk, &$options, $exclude): void {
-            foreach ($nodes as $node) {
-                if (in_array($node->getKey(), $exclude, true)) {
-                    continue;
-                }
-
-                $options[$node->getKey()] = str_repeat('—  ', $node->depth).$node->name;
-
-                $walk($node->children);
-            }
-        };
-
-        $walk(Category::tree());
-
-        return $options;
+        return Category::query()
+            ->withDepth()
+            ->defaultOrder()
+            ->get()
+            ->reject(fn (Category $category) => in_array($category->getKey(), $exclude, true))
+            ->mapWithKeys(fn (Category $category) => [
+                $category->getKey() => str_repeat('—  ', (int) $category->depth).$category->name,
+            ])
+            ->all();
     }
 }
