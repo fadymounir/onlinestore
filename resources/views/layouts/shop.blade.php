@@ -6,6 +6,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', $storeName) — {{ $storeName }}</title>
     <meta name="description" content="@yield('description', $storeTagline)">
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" href="{{ asset('images/logo-192.png') }}" sizes="192x192">
+    <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
+    <meta property="og:image" content="{{ asset('images/logo.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-stone-50 font-sans text-stone-800 antialiased">
@@ -24,8 +28,11 @@
 
 <header class="sticky top-0 z-30 border-b border-stone-200 bg-white/95 backdrop-blur">
     <div class="mx-auto flex max-w-7xl items-center gap-4 px-4 py-4">
-        <a href="{{ route('home') }}" class="shrink-0 text-xl font-bold text-stone-900">
-            {{ $storeName }}
+        <a href="{{ route('home') }}" class="flex shrink-0 items-center gap-2.5">
+            <img src="{{ asset('images/logo-192.png') }}" alt="{{ $storeName }}" width="192" height="192"
+                 class="size-11 rounded-full">
+            {{-- The badge carries its own wordmark, so the name is a companion, not a repeat. --}}
+            <span class="hidden text-xl font-bold text-stone-900 sm:inline">{{ $storeName }}</span>
         </a>
 
         <form action="{{ route('catalog') }}" method="GET" class="hidden flex-1 md:block">
@@ -110,7 +117,10 @@
 <footer class="mt-16 border-t border-stone-200 bg-white">
     <div class="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-            <h2 class="mb-3 text-lg font-bold text-stone-900">{{ $storeName }}</h2>
+            <div class="mb-3 flex items-center gap-2.5">
+                <img src="{{ asset('images/logo-192.png') }}" alt="" width="192" height="192" class="size-10 rounded-full">
+                <h2 class="text-lg font-bold text-stone-900">{{ $storeName }}</h2>
+            </div>
             <p class="text-sm leading-relaxed text-stone-600">{{ $storeTagline }}</p>
         </div>
         <div>
