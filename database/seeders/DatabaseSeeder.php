@@ -14,11 +14,12 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             StaffSeeder::class,
             EgyptLocationSeeder::class,
-            AttributeSeeder::class,
             SettingSeeder::class,
 
-            // Arabic clothes-store demo data.
-            ClothingCatalogSeeder::class,
+            // The floukaa.com catalogue. It owns the attributes too — its
+            // variation options (مقاس الخاتم، طول السلسلة) are the shop's own,
+            // so there is no generic attribute seeder ahead of it.
+            FloukaaCatalogSeeder::class,
             CustomerSeeder::class,
             SalesSeeder::class,
         ]);

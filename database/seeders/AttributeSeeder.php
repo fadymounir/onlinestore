@@ -9,7 +9,13 @@ use Illuminate\Database\Seeder;
 
 class AttributeSeeder extends Seeder
 {
-    /** Starter attributes for a clothing-style catalogue; edit in the panel. */
+    /**
+     * A generic colour/size pair, kept as a fixture for the test suite.
+     *
+     * Not part of the default seed run: FloukaaCatalogSeeder brings the real
+     * shop's own variation attributes (مقاس الخاتم، طول السلسلة، اللون) and
+     * clears this table before inserting them.
+     */
     private const ATTRIBUTES = [
         [
             'name' => 'اللون',
