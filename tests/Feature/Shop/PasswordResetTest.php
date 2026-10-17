@@ -72,7 +72,9 @@ class PasswordResetTest extends TestCase
         $this->assertStringContainsString('أهلاً منى عبد الرحمن', $rendered);
         $this->assertStringContainsString('إعادة تعيين كلمة المرور', $rendered);
         $this->assertStringContainsString('مع تحياتنا', $rendered);
-        $this->assertStringContainsString('متجري', $rendered);
+        // The store signs the mail; the name itself is a Latin wordmark, so it
+        // is read from config rather than asserted as an Arabic literal.
+        $this->assertStringContainsString(config('app.name'), $rendered);
 
         // Nothing may fall back to Laravel's untranslated English strings.
         foreach (['Reset Password Notification', 'Regards', 'Hello!', 'trouble clicking'] as $english) {

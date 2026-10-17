@@ -3,79 +3,65 @@
 @section('title', 'الصفحة الرئيسية')
 
 @section('content')
-    {{-- hero --}}
-    <section class="mb-12 overflow-hidden rounded-3xl bg-stone-900 px-6 py-14 text-center sm:px-12 sm:py-20">
-        <p class="mb-3 text-sm font-medium tracking-wide text-amber-400">أزياء لكل المناسبات</p>
-        <h1 class="mx-auto max-w-2xl text-3xl font-bold leading-tight text-white sm:text-5xl">
+    {{--
+        A plain masthead rather than a hero panel. On a shop the products are
+        the page, and a full-bleed dark block with its own type scale mostly
+        pushes them below the fold.
+    --}}
+    <section class="mb-10 border-b border-stone-200 pb-8">
+        <h1 class="max-w-2xl text-2xl font-bold leading-snug text-stone-900 sm:text-3xl">
             {{ $storeTagline ?: 'تسوّق بسهولة من أي مكان في مصر' }}
         </h1>
-        <p class="mx-auto mt-4 max-w-xl text-stone-300">
-            الدفع عند الاستلام في كل المحافظات، والشحن مجاناً للطلبات فوق 1500 ج.م داخل القاهرة الكبرى.
+        <p class="mt-3 max-w-xl text-sm leading-relaxed text-stone-600">
+            الدفع عند الاستلام في كل المحافظات، والشحن مجاناً للطلبات فوق 1500 ج.م
+            داخل القاهرة الكبرى.
         </p>
         <a href="{{ route('catalog') }}"
-           class="mt-8 inline-block rounded-full bg-amber-500 px-8 py-3 font-semibold text-stone-900 transition hover:bg-amber-400">
-            ابدأ التسوّق
+           class="mt-5 inline-block rounded-lg bg-stone-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-800">
+            تصفّح كل المنتجات
         </a>
     </section>
 
-    {{-- categories --}}
+    {{--
+        Categories as plain links. Twenty-one photo tiles were the bulk of this
+        page, and the mega menu in the header already browses the tree in full
+        depth — this is just a flat shortcut to each root.
+    --}}
     @if ($categories->isNotEmpty())
-        <section class="mb-14">
-            <h2 class="mb-5 text-xl font-bold text-stone-900">تصفّح الأقسام</h2>
-            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <section class="mb-12">
+            <h2 class="mb-4 text-base font-bold text-stone-900">الأقسام</h2>
+            <ul class="flex flex-wrap gap-2">
                 @foreach ($categories as $category)
-                    <a href="{{ route('category', $category) }}"
-                       class="group overflow-hidden rounded-2xl border border-stone-200 bg-white text-center transition hover:border-amber-300">
-                        <span class="block aspect-[4/3] overflow-hidden bg-stone-100">
-                            @if ($category->image)
-                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($category->image) }}"
-                                     alt="{{ $category->name }}" loading="lazy"
-                                     class="size-full object-cover transition duration-300 group-hover:scale-105">
-                            @endif
-                        </span>
-                        <span class="block p-4">
-                            <span class="block text-sm font-semibold text-stone-900 group-hover:text-amber-800">
-                                {{ $category->name }}
-                            </span>
-                            @if ($category->children->isNotEmpty())
-                                <span class="mt-1 block text-[11px] text-stone-500">
-                                    {{ $category->children->count() }} قسم فرعي
-                                </span>
-                            @endif
-                        </span>
+                    <li>
+                        <a href="{{ route('category', $category) }}"
+                           class="block rounded-lg border border-stone-200 bg-white px-3.5 py-2 text-sm text-stone-700 transition hover:border-stone-400 hover:text-stone-900">
+                            {{ $category->name }}
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
+    {{-- Both shelves are the same grid, so they share one block of markup. --}}
+    @foreach ([
+        ['منتجات مميّزة', $featured, route('catalog')],
+        ['وصل حديثاً', $newest, route('catalog', ['sort' => 'newest'])],
+    ] as [$heading, $products, $seeAll])
+        @if ($products->isNotEmpty())
+            <section class="mb-12">
+                <div class="mb-4 flex items-baseline justify-between gap-4">
+                    <h2 class="text-base font-bold text-stone-900">{{ $heading }}</h2>
+                    <a href="{{ $seeAll }}" class="text-sm text-stone-500 transition hover:text-stone-900">
+                        شاهد الكل
                     </a>
-                @endforeach
-            </div>
-        </section>
-    @endif
-
-    {{-- featured --}}
-    @if ($featured->isNotEmpty())
-        <section class="mb-14">
-            <div class="mb-5 flex items-end justify-between gap-4">
-                <h2 class="text-xl font-bold text-stone-900">منتجات مميّزة</h2>
-                <a href="{{ route('catalog') }}" class="text-sm font-medium text-amber-700 hover:underline">شاهد الكل</a>
-            </div>
-            <div class="grid grid-cols-2 gap-5 lg:grid-cols-4">
-                @foreach ($featured as $product)
-                    <x-product-card :product="$product" />
-                @endforeach
-            </div>
-        </section>
-    @endif
-
-    {{-- newest --}}
-    @if ($newest->isNotEmpty())
-        <section>
-            <div class="mb-5 flex items-end justify-between gap-4">
-                <h2 class="text-xl font-bold text-stone-900">وصل حديثاً</h2>
-                <a href="{{ route('catalog') }}?sort=newest" class="text-sm font-medium text-amber-700 hover:underline">شاهد الكل</a>
-            </div>
-            <div class="grid grid-cols-2 gap-5 lg:grid-cols-4">
-                @foreach ($newest as $product)
-                    <x-product-card :product="$product" />
-                @endforeach
-            </div>
-        </section>
-    @endif
+                </div>
+                <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    @foreach ($products as $product)
+                        <x-product-card :product="$product" />
+                    @endforeach
+                </div>
+            </section>
+        @endif
+    @endforeach
 @endsection

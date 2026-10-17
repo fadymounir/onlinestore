@@ -2,31 +2,34 @@
 
 namespace App\Http\Controllers\Shop;
 
+use App\Http\Controllers\Concerns\SendsFragments;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class CatalogController extends Controller
 {
-    public function index(Request $request): View
+    use SendsFragments;
+
+    public function index(Request $request): View|JsonResponse
     {
-        return view('shop.catalog', [
+        $products = $this->query($request)->paginate(12)->withQueryString();
+
+        return $this->respond($request, $products, [
             'category' => null,
             'ancestors' => collect(),
-            'products' => $this->query($request)->paginate(12)->withQueryString(),
-            'categories' => Category::tree(onlyActive: true),
-            'brands' => Brand::active()->orderBy('name')->get(),
             'heading' => $request->filled('q')
                 ? 'نتائج البحث عن: '.$request->string('q')
                 : 'كل المنتجات',
         ]);
     }
 
-    public function category(Request $request, Category $category): View
+    public function category(Request $request, Category $category): View|JsonResponse
     {
         abort_unless($category->is_active, 404);
 
@@ -34,18 +37,47 @@ class CatalogController extends Controller
         // inactive ancestor is not reachable either.
         abort_if($category->ancestors()->where('is_active', false)->exists(), 404);
 
-        return view('shop.catalog', [
+        $products = $this->query($request)
+            // A branch shows everything beneath it, at any depth, not an
+            // empty page — one nested-set query covers the whole subtree.
+            ->whereIn('category_id', $category->subtreeIds())
+            ->paginate(12)
+            ->withQueryString();
+
+        return $this->respond($request, $products, [
             'category' => $category,
             'ancestors' => $category->ancestors()->defaultOrder()->get(),
-            'products' => $this->query($request)
-                // A branch shows everything beneath it, at any depth, not an
-                // empty page — one nested-set query covers the whole subtree.
-                ->whereIn('category_id', $category->subtreeIds())
-                ->paginate(12)
-                ->withQueryString(),
+            'heading' => $category->name,
+        ]);
+    }
+
+    /**
+     * The whole page, or just the grid when the JS layer asks for a fragment.
+     *
+     * Filtering, sorting and paging all keep the same page identity — same
+     * heading, same breadcrumb, same filter panel — so only the grid and the
+     * count need to move, and the URL is pushed so the result stays shareable
+     * and the back button works.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function respond(Request $request, $products, array $context): View|JsonResponse
+    {
+        if ($this->wantsFragment($request)) {
+            return $this->fragment(
+                swap: [
+                    '#catalog-results' => view('shop.partials.catalog-results', ['products' => $products])->render(),
+                    '#catalog-count' => $products->total().' منتج',
+                ],
+                extra: ['url' => $request->fullUrl()],
+            );
+        }
+
+        return view('shop.catalog', [
+            'products' => $products,
             'categories' => Category::tree(onlyActive: true),
             'brands' => Brand::active()->orderBy('name')->get(),
-            'heading' => $category->name,
+            ...$context,
         ]);
     }
 

@@ -1,3 +1,26 @@
+# Simple
+
+An Arabic, RTL storefront with a Filament admin panel, built on Laravel.
+
+- **Catalogue** — a nested-set category tree with a mega menu, products with
+  variants, attributes and photos. The demo data is a scrape of a real shop;
+  see [`database/data/README.md`](database/data/README.md).
+- **Shop** — cart for guests and customers, coupons, cash on delivery,
+  per-governorate shipping, wishlists and reviews.
+- **Admin** — Filament panel at `/admin` with roles and permissions.
+
+## Running it
+
+```sh
+docker compose up -d          # joins the shared global_network services
+php artisan migrate:fresh --seed
+```
+
+The storefront is then on http://localhost:9000 and the panel on
+http://localhost:9000/admin.
+
+---
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">
@@ -56,4 +79,3 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-# onlinestore

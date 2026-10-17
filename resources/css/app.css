@@ -7,3 +7,133 @@
     --font-sans: 'Cairo', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/*
+|------------------------------------------------------------------------------
+| AJAX layer — see resources/js/app.js
+|------------------------------------------------------------------------------
+| Plain CSS rather than Tailwind utilities: these elements are created in
+| JavaScript, where Tailwind's scanner would never see the class names.
+*/
+
+/* The page-top progress bar. It creeps towards 90% on an unknown duration,
+   then snaps shut when the request lands — honest about progress it cannot
+   actually measure, while still showing that something is happening. */
+.app-loader {
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    z-index: 100;
+    block-size: 3px;
+    inline-size: 0;
+    background: linear-gradient(90deg, var(--color-amber-500), var(--color-amber-300));
+    opacity: 0;
+    pointer-events: none;
+}
+
+.app-loader.is-loading {
+    opacity: 1;
+    animation: app-loader-creep 10s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+}
+
+.app-loader.is-done {
+    inline-size: 100%;
+    opacity: 0;
+    transition:
+        inline-size 160ms ease-out,
+        opacity 260ms ease-out 140ms;
+}
+
+@keyframes app-loader-creep {
+    0% {
+        inline-size: 0;
+    }
+    40% {
+        inline-size: 55%;
+    }
+    100% {
+        inline-size: 90%;
+    }
+}
+
+/* Toasts: bottom-start, so they sit clear of the sticky header and, in RTL,
+   away from the thumb on a phone. */
+.app-toasts {
+    position: fixed;
+    inset-block-end: 1rem;
+    inset-inline-start: 1rem;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-inline-size: calc(100vw - 2rem);
+}
+
+.app-toast {
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid;
+    font-size: 0.875rem;
+    font-weight: 500;
+    box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.15);
+    /* Slide in from the inline start, which flips with the RTL document. */
+    transform: translateX(var(--app-toast-offset, -0.5rem));
+    opacity: 0;
+    transition:
+        opacity 200ms ease-out,
+        transform 200ms ease-out;
+}
+
+[dir='rtl'] .app-toast {
+    --app-toast-offset: 0.5rem;
+}
+
+.app-toast.is-visible {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.app-toast--success {
+    border-color: var(--color-emerald-200);
+    background: var(--color-emerald-50);
+    color: var(--color-emerald-900);
+}
+
+.app-toast--error {
+    border-color: var(--color-red-200);
+    background: var(--color-red-50);
+    color: var(--color-red-900);
+}
+
+/* A control mid-request: visibly inert, but holding its size so the layout
+   does not jump. */
+.is-busy {
+    opacity: 0.55;
+    cursor: progress;
+}
+
+/* A region waiting for its replacement. Kept subtle — the progress bar is the
+   real signal, this only stops the stale content looking interactive. */
+.is-swapping {
+    opacity: 0.45;
+    transition: opacity 120ms ease-out;
+    pointer-events: none;
+}
+
+/* The wishlist heart fills once the server confirms the product went in. */
+.is-active svg {
+    fill: currentColor;
+    color: var(--color-red-600);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-loader.is-loading {
+        animation: none;
+        inline-size: 60%;
+    }
+
+    .app-toast {
+        transform: none;
+        transition: opacity 120ms linear;
+    }
+}

@@ -89,11 +89,12 @@
                 <svg class="size-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.4a1.5 1.5 0 0 1 1.47 1.2L5.4 6m0 0 1.8 8.5a1.5 1.5 0 0 0 1.47 1.2h8.2a1.5 1.5 0 0 0 1.46-1.14l1.6-6.4A.9.9 0 0 0 19.06 6H5.4Zm3.6 14.25a1.125 1.125 0 1 1-2.25 0 1.125 1.125 0 0 1 2.25 0Zm9 0a1.125 1.125 0 1 1-2.25 0 1.125 1.125 0 0 1 2.25 0Z"/>
                 </svg>
-                @if ($cartCount > 0)
-                    <span class="absolute -top-0.5 -start-0.5 flex size-5 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white">
-                        {{ $cartCount }}
-                    </span>
-                @endif
+                {{-- Always rendered, hidden at zero: the AJAX layer repaints its
+                     text after every cart change and cannot create a missing node.
+                     Visibility rides on hidden/flex rather than the `hidden`
+                     attribute, which `display:flex` would otherwise win against. --}}
+                <span id="cart-count"
+                      class="{{ $cartCount < 1 ? 'hidden' : 'flex' }} absolute -top-0.5 -start-0.5 size-5 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white">{{ $cartCount }}</span>
             </a>
         </nav>
     </div>

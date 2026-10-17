@@ -9,11 +9,11 @@ class SettingSeeder extends Seeder
 {
     /** [key, label, value, type, group] */
     private const SETTINGS = [
-        ['store_name', 'اسم المتجر', 'متجري', 'string', 'general'],
+        ['store_name', 'اسم المتجر', 'Simple', 'string', 'general'],
         ['store_tagline', 'الشعار النصي', 'تسوّق بسهولة من أي مكان في مصر', 'string', 'general'],
         ['announcement_text', 'شريط الإعلان أعلى الموقع', 'الشحن مجاناً للطلبات فوق 1500 ج.م داخل القاهرة الكبرى', 'string', 'general'],
         ['store_logo', 'شعار المتجر', null, 'image', 'general'],
-        ['store_email', 'البريد الإلكتروني', 'info@online-store.test', 'string', 'contact'],
+        ['store_email', 'البريد الإلكتروني', 'info@simple.test', 'string', 'contact'],
         ['store_phone', 'رقم الهاتف', '01000000000', 'string', 'contact'],
         ['store_whatsapp', 'واتساب', '01000000000', 'string', 'contact'],
         ['store_address', 'عنوان المتجر', 'القاهرة، مصر', 'text', 'contact'],

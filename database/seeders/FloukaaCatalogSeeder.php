@@ -38,7 +38,7 @@ class FloukaaCatalogSeeder extends Seeder
     /** Photos are fetched in pools this wide — polite, but not single-file slow. */
     private const CONCURRENCY = 12;
 
-    private const USER_AGENT = 'onlineStore-seeder/1.0 (+catalogue import)';
+    private const USER_AGENT = 'simple-seeder/1.0 (+catalogue import)';
 
     /**
      * Everything the catalogue owns, child-before-parent.

@@ -43,7 +43,7 @@ class ManageSettingsTest extends TestCase
     {
         Livewire::test(ManageSettings::class)
             ->assertSchemaStateSet([
-                'store_name' => 'متجري',
+                'store_name' => 'Simple',
                 'currency_symbol' => 'ج.م',
             ], 'form');
     }
@@ -75,7 +75,7 @@ class ManageSettingsTest extends TestCase
     public function test_saving_busts_the_settings_cache(): void
     {
         // Warm the cache through the accessor the storefront uses.
-        $this->assertSame('متجري', Setting::get('store_name'));
+        $this->assertSame('Simple', Setting::get('store_name'));
 
         Livewire::test(ManageSettings::class)
             ->fillForm(['store_name' => 'اسم جديد'])

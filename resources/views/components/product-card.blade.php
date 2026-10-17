@@ -40,7 +40,7 @@
             <x-price :amount="$cheapest" :compare="$product->compare_at_price" size="sm" />
 
             @auth
-                <form action="{{ route('wishlist.toggle', $product) }}" method="POST">
+                <form action="{{ route('wishlist.toggle', $product) }}" method="POST" data-ajax data-ajax-wishlist>
                     @csrf
                     <button type="submit" title="أضف إلى المفضّلة"
                             class="rounded-full p-1.5 text-stone-400 transition hover:bg-red-50 hover:text-red-600">

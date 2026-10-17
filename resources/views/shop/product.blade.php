@@ -167,7 +167,8 @@
                         </p>
                     @endif
 
-                    <form action="{{ route('cart.add', $selected) }}" method="POST" class="flex flex-wrap items-center gap-3">
+                    <form action="{{ route('cart.add', $selected) }}" method="POST" data-ajax
+                          class="flex flex-wrap items-center gap-3">
                         @csrf
                         <label for="quantity" class="text-sm text-stone-600">الكمية</label>
                         <input type="number" id="quantity" name="quantity" value="1" min="1"
@@ -186,7 +187,7 @@
                 @endif
 
                 @auth
-                    <form action="{{ route('wishlist.toggle', $product) }}" method="POST" class="mt-4">
+                    <form action="{{ route('wishlist.toggle', $product) }}" method="POST" data-ajax class="mt-4">
                         @csrf
                         <button type="submit" class="text-sm font-medium text-stone-600 hover:text-red-600">
                             ♡ أضف إلى المفضّلة
