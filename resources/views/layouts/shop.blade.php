@@ -21,6 +21,10 @@
     <title>@yield('title', $storeName) — {{ $storeName }}</title>
     <meta name="description" content="@yield('description', $storeTagline)">
     <meta name="theme-color" content="#1c1917">
+    {{-- The SVG first: a browser that understands it gets a mark that is
+         sharp at any tab size, and the .ico is there for the ones that do not.
+         Both are built from images/mark.svg — see `npm run logo`. --}}
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/mark.svg') }}">
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
     <link rel="icon" type="image/png" href="{{ asset('images/logo-192.png') }}" sizes="192x192">
     <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
@@ -45,7 +49,7 @@
      only ever appears on a load slow enough to be worth covering. --}}
 <div class="app-preloader" aria-hidden="true">
     <div class="app-preloader__inner">
-        <img src="{{ asset('images/logo-192.png') }}" alt="" width="192" height="192" class="app-preloader__logo">
+        <img src="{{ asset('images/mark.svg') }}" alt="" width="64" height="64" class="app-preloader__logo">
         <span class="app-preloader__name">{{ $storeName }}</span>
         <span class="app-preloader__track"><span class="app-preloader__bar"></span></span>
     </div>

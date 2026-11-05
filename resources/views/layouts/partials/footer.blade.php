@@ -6,14 +6,17 @@
 
     {{-- The information column only exists when an admin has marked a page for
          the footer, so the track count follows it rather than leaving a gap. --}}
-    <div class="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:grid-cols-2 {{ $footerPages->isNotEmpty() ? 'lg:grid-cols-5' : 'lg:grid-cols-4' }}">
+    <div class="mx-auto grid max-w-7xl gap-10 px-4 py-14 text-center sm:grid-cols-2 sm:text-start {{ $footerPages->isNotEmpty() ? 'lg:grid-cols-5' : 'lg:grid-cols-4' }}">
         <div class="sm:col-span-2 lg:col-span-1">
-            <div class="mb-4 flex items-center gap-2.5">
-                <img src="{{ asset('images/logo-192.png') }}" alt="" width="192" height="192" class="size-10 rounded-xl">
+            <div class="mb-4 flex items-center justify-center gap-2.5 sm:justify-start">
+                <img src="{{ asset('images/mark.svg') }}" alt="" width="64" height="64" class="size-10 rounded-xl">
                 <h2 class="text-lg font-extrabold tracking-tight text-white">{{ $storeName }}</h2>
             </div>
-            <p class="max-w-sm text-sm leading-relaxed">{{ $storeTagline }}</p>
-            <x-social-links :socials="$socials" :whatsapp-url="$storeWhatsappUrl" class="mt-5" />
+            {{-- mx-auto so the capped width centres under the wordmark
+                 instead of hugging the start edge of a centred column. --}}
+            <p class="mx-auto max-w-sm text-sm leading-relaxed sm:mx-0">{{ $storeTagline }}</p>
+            <x-social-links :socials="$socials" :whatsapp-url="$storeWhatsappUrl"
+                            class="mt-5 justify-center sm:justify-start" />
         </div>
         <div>
             <h3 class="mb-4 text-xs font-bold uppercase tracking-widest text-white">التصنيفات</h3>

@@ -34,7 +34,7 @@ class AdminPanelProvider extends PanelProvider
             // isSimple: false renders the profile inside the panel layout.
             ->profile(EditProfile::class, isSimple: false)
             ->brandName(config('app.name'))
-            ->brandLogo(asset('images/logo-192.png'))
+            ->brandLogo(asset('images/mark.svg'))
             ->brandLogoHeight('2.5rem')
             ->favicon(asset('favicon.ico'))
             // Inter (Filament's default) has poor Arabic coverage; Cairo is a

@@ -7,8 +7,8 @@
     itself. Roots past the seventh move into a "المزيد" panel rather than
     pushing the bar past the viewport, which is what used to give the whole
     page a horizontal scrollbar.
-    Mobile: a rail of the roots, with the whole tree one tap away as nested
-    <details> accordions.
+    Mobile: a rail of the roots, with the whole tree one tap away behind a
+    disclosure that grows open rather than appearing.
 
     The two halves render separately because they live in different places:
     the bar belongs in the sticky header, while on a phone a sticky header
@@ -164,18 +164,36 @@
             @endforeach
         </div>
 
-        <details class="group border-t border-stone-200/70">
-            <summary class="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-bold text-stone-800">
+        {{--
+            A checkbox rather than the <details> this used to be, for the same
+            reason the catalogue's filter panel is one: a closed <details> puts
+            its content at `display: none`, which has no height to animate from
+            — so the tree appeared all at once, which reads as the page
+            glitching rather than as a menu opening. The panel grows its own
+            row instead; see .tree-panel in resources/css/app.css.
+
+            Still no JavaScript, so the tree opens for a visitor without it.
+        --}}
+        <div class="border-t border-stone-200/70">
+            <input type="checkbox" id="categories-toggle" class="peer sr-only">
+
+            <label for="categories-toggle"
+                   class="tree-toggle flex cursor-pointer items-center justify-between px-4 py-3.5 text-sm
+                          font-bold text-stone-800 transition active:scale-[0.99]">
                 تصفّح كل التصنيفات
-                <svg class="size-4 text-stone-400 transition group-open:rotate-180" fill="none" stroke="currentColor"
+                <svg class="tree-chevron size-4 text-stone-400" fill="none" stroke="currentColor"
                      stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
                 </svg>
-            </summary>
+            </label>
 
-            <div class="border-t border-stone-100 px-4 pb-4 pt-2">
-                <x-mega-menu-mobile-branch :categories="$categories" />
+            <div class="tree-panel">
+                <div class="tree-panel__sheet">
+                    <div class="border-t border-stone-100 px-4 pb-4 pt-2">
+                        <x-mega-menu-mobile-branch :categories="$categories" />
+                    </div>
+                </div>
             </div>
-        </details>
+        </div>
     </nav>
 @endif

@@ -68,16 +68,17 @@
         {{--
             A checkbox rather than <details>: the panel has to be collapsed on
             a phone and permanently open from `lg` up, and a closed <details>
-            cannot be forced open with CSS alone. The input is the `peer`, the
-            label is the button, and `lg:block` beats `hidden` at the wide
-            breakpoint whatever the checkbox says.
+            cannot be forced open with CSS alone. The input is the `peer` and
+            the label is the button, so the whole thing works with no
+            JavaScript — and the opening is CSS too, for the same reason.
         --}}
         <aside class="lg:sticky lg:top-36">
             <input type="checkbox" id="filters-toggle" class="peer sr-only">
 
             <label for="filters-toggle"
-                   class="mb-3 flex cursor-pointer items-center justify-between rounded-2xl bg-white px-5 py-4
-                          text-sm font-bold text-stone-900 shadow-soft lg:hidden">
+                   class="filters-toggle mb-3 flex cursor-pointer items-center justify-between rounded-2xl bg-white
+                          px-5 py-4 text-sm font-bold text-stone-900 shadow-soft transition
+                          active:scale-[0.99] lg:hidden">
                 <span class="flex items-center gap-2">
                     <svg class="size-4 text-brand-600" fill="none" stroke="currentColor" stroke-width="2"
                          viewBox="0 0 24 24" aria-hidden="true">
@@ -85,59 +86,79 @@
                     </svg>
                     تصفية النتائج
                 </span>
-                <span class="text-xs font-semibold text-stone-500">{{ $products->total() }} منتج</span>
+                <span class="flex items-center gap-2 text-xs font-semibold text-stone-500">
+                    {{ $products->total() }} منتج
+                    {{-- Turns over as the panel opens, so the tap has an answer
+                         before the panel has finished arriving. --}}
+                    <svg class="filters-chevron size-4 text-stone-400" fill="none" stroke="currentColor"
+                         stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+                    </svg>
+                </span>
             </label>
 
-            <form action="{{ url()->current() }}" method="GET" data-ajax-nav
-                  class="hidden space-y-6 rounded-3xl bg-white p-5 shadow-soft peer-checked:block lg:block">
-                @if (request('q'))
-                    <input type="hidden" name="q" value="{{ request('q') }}">
-                @endif
-                @if (request('sort'))
-                    <input type="hidden" name="sort" value="{{ request('sort') }}">
-                @endif
+            {{--
+                The panel opens by growing its own row from 0fr to 1fr rather
+                than by flipping `display`, which has nothing to animate
+                between. The card's white and its rounding sit out here on the
+                track so the sheet underneath can clip without taking the
+                shadow with it; see .filters-panel in resources/css/app.css for
+                why the clipping is there at all.
+            --}}
+            <div class="filters-panel rounded-3xl bg-white shadow-soft lg:shadow-soft">
+                <div class="filters-panel__sheet">
+                    <form action="{{ url()->current() }}" method="GET" data-ajax-nav
+                          class="space-y-6 p-5">
+                        @if (request('q'))
+                            <input type="hidden" name="q" value="{{ request('q') }}">
+                        @endif
+                        @if (request('sort'))
+                            <input type="hidden" name="sort" value="{{ request('sort') }}">
+                        @endif
 
-                <div>
-                    <h2 class="mb-3 text-xs font-bold uppercase tracking-widest text-stone-500">السعر (ج.م)</h2>
-                    <div class="flex items-center gap-2">
-                        <input type="number" name="min" min="0" value="{{ request('min') }}" placeholder="من"
-                               class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm
-                                      outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
-                        <span class="text-stone-300">—</span>
-                        <input type="number" name="max" min="0" value="{{ request('max') }}" placeholder="إلى"
-                               class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm
-                                      outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
-                    </div>
-                </div>
-
-                @if ($brands->isNotEmpty())
-                    <div>
-                        <h2 class="mb-3 text-xs font-bold uppercase tracking-widest text-stone-500">الماركة</h2>
-                        <div class="max-h-60 space-y-1 overflow-y-auto pe-1">
-                            @foreach ($brands as $brand)
-                                <label class="flex cursor-pointer items-center gap-2.5 rounded-xl px-2 py-1.5
-                                              text-sm text-stone-700 transition hover:bg-stone-50">
-                                    <input type="checkbox" name="brand[]" value="{{ $brand->id }}" data-ajax-auto
-                                           @checked(in_array((string) $brand->id, (array) request('brand', []), true))
-                                           class="size-4 accent-brand-600">
-                                    {{ $brand->name }}
-                                </label>
-                            @endforeach
+                        <div>
+                            <h2 class="mb-3 text-xs font-bold uppercase tracking-widest text-stone-500">السعر (ج.م)</h2>
+                            <div class="flex items-center gap-2">
+                                <input type="number" name="min" min="0" value="{{ request('min') }}" placeholder="من"
+                                       class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm
+                                              outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
+                                <span class="text-stone-300">—</span>
+                                <input type="number" name="max" min="0" value="{{ request('max') }}" placeholder="إلى"
+                                       class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm
+                                              outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
+                            </div>
                         </div>
-                    </div>
-                @endif
 
-                <div class="flex gap-2">
-                    <button type="submit"
-                            class="flex-1 rounded-xl bg-stone-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-stone-800">
-                        تطبيق
-                    </button>
-                    <a href="{{ $category ? route('category', $category) : route('catalog') }}"
-                       class="rounded-xl border border-stone-200 px-4 py-3 text-sm font-semibold text-stone-600 transition hover:bg-stone-50">
-                        مسح
-                    </a>
+                        @if ($brands->isNotEmpty())
+                            <div>
+                                <h2 class="mb-3 text-xs font-bold uppercase tracking-widest text-stone-500">الماركة</h2>
+                                <div class="max-h-60 space-y-1 overflow-y-auto pe-1">
+                                    @foreach ($brands as $brand)
+                                        <label class="flex cursor-pointer items-center gap-2.5 rounded-xl px-2 py-1.5
+                                                      text-sm text-stone-700 transition hover:bg-stone-50">
+                                            <input type="checkbox" name="brand[]" value="{{ $brand->id }}" data-ajax-auto
+                                                   @checked(in_array((string) $brand->id, (array) request('brand', []), true))
+                                                   class="size-4 accent-brand-600">
+                                            {{ $brand->name }}
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        <div class="flex gap-2">
+                            <button type="submit"
+                                    class="flex-1 rounded-xl bg-stone-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-stone-800">
+                                تطبيق
+                            </button>
+                            <a href="{{ $category ? route('category', $category) : route('catalog') }}"
+                               class="rounded-xl border border-stone-200 px-4 py-3 text-sm font-semibold text-stone-600 transition hover:bg-stone-50">
+                                مسح
+                            </a>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
         </aside>
 
         {{-- The swap target for a filter or a sort. Inside it the grid grows
