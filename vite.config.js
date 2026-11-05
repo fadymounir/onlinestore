@@ -10,7 +10,7 @@ export default defineConfig({
             refresh: true,
             fonts: [
                 bunny('Cairo', {
-                    weights: [400, 500, 600],
+                    weights: [400, 500, 600, 700, 800],
                 }),
             ],
         }),

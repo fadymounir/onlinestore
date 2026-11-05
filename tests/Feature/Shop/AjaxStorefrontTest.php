@@ -246,7 +246,7 @@ class AjaxStorefrontTest extends TestCase
     public function test_the_fragment_url_preserves_the_filters_for_history(): void
     {
         $url = $this->withHeaders(self::FRAGMENT)
-            ->get(route('catalog', ['sort' => 'price_asc', 'in_stock' => 1]))
+            ->get(route('catalog', ['sort' => 'price_asc', 'min' => 100]))
             ->assertOk()
             ->json('url');
 
@@ -256,7 +256,7 @@ class AjaxStorefrontTest extends TestCase
         parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
         ksort($query);
 
-        $this->assertSame(['in_stock' => '1', 'sort' => 'price_asc'], $query);
+        $this->assertSame(['min' => '100', 'sort' => 'price_asc'], $query);
         $this->assertSame(route('catalog'), strtok($url, '?'));
     }
 
@@ -267,6 +267,33 @@ class AjaxStorefrontTest extends TestCase
 
         $response->assertOk()->assertJsonPath('swap.#catalog-count', '1 منتج');
         $this->assertStringContainsString('خاتم استانلس', $response->json('swap.#catalog-results'));
+    }
+
+    public function test_a_filter_brings_its_own_remove_chip_with_it(): void
+    {
+        $response = $this->withHeaders(self::FRAGMENT)
+            ->get(route('catalog', ['min' => 100]))
+            ->assertOk();
+
+        // The chips are the only way to drop a filter without opening the
+        // sidebar, so a swap that left them behind would tick a box the
+        // customer then had no way to untick short of reloading.
+        $chips = $response->json('swap.#catalog-chips');
+        $this->assertStringContainsString('السعر 100', $chips);
+        $this->assertStringContainsString('مسح الكل', $chips);
+    }
+
+    public function test_clearing_the_last_filter_empties_the_chip_row(): void
+    {
+        $chips = $this->withHeaders(self::FRAGMENT)
+            ->get(route('catalog'))
+            ->assertOk()
+            ->json('swap.#catalog-chips');
+
+        // Sent even with nothing in it: a filter being cleared has to be able
+        // to take the row away, which an omitted key could not do.
+        $this->assertIsString($chips);
+        $this->assertSame('', trim($chips));
     }
 
     public function test_the_catalog_still_renders_a_full_page_without_the_header(): void

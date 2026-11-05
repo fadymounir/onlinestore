@@ -15,12 +15,12 @@ class HomeController extends Controller
             'categories' => Category::tree(onlyActive: true),
             'featured' => Product::published()
                 ->where('is_featured', true)
-                ->with('primaryImage', 'brand', 'variants')
+                ->with('primaryImage', 'images', 'brand', 'variants')
                 ->latest('published_at')
                 ->take(8)
                 ->get(),
             'newest' => Product::published()
-                ->with('primaryImage', 'brand', 'variants')
+                ->with('primaryImage', 'images', 'brand', 'variants')
                 ->latest('published_at')
                 ->take(8)
                 ->get(),

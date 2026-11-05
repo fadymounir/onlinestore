@@ -52,22 +52,49 @@ class CatalogController extends Controller
     }
 
     /**
-     * The whole page, or just the grid when the JS layer asks for a fragment.
+     * The whole page, or the part of it that moved.
      *
-     * Filtering, sorting and paging all keep the same page identity — same
-     * heading, same breadcrumb, same filter panel — so only the grid and the
-     * count need to move, and the URL is pushed so the result stays shareable
-     * and the back button works.
+     * Three shapes come out of here, and which one depends on what the shopper
+     * just did rather than on which route they are on.
+     *
+     *   Scrolled to the end of the grid. Twelve more cards, appended to what
+     *   is already there, and a fresh link to the page after that. Nothing
+     *   else on the page has changed, so nothing else is sent.
+     *
+     *   Changed a filter or the sort. The listing is now a different listing:
+     *   the grid is replaced whole, the total is rewritten, and the chips come
+     *   with it — they are the only place a filter can be removed from without
+     *   opening the sidebar, so leaving them behind meant ticking a brand and
+     *   having no way to untick it short of a reload. The URL is pushed so the
+     *   result stays shareable and the back button works.
+     *
+     *   Asked for the page itself. The document, as it always was.
      *
      * @param  array<string, mixed>  $context
      */
     private function respond(Request $request, $products, array $context): View|JsonResponse
     {
+        if ($this->wantsFragment($request) && $this->wantsAppend($request)) {
+            return $this->fragment(
+                swap: ['#catalog-more' => view('shop.partials.load-more', [
+                    'products' => $products,
+                    'grid' => '#catalog-grid',
+                ])->render()],
+                append: ['#catalog-grid' => view('shop.partials.product-cards', ['products' => $products])->render()],
+            );
+        }
+
+        $brands = Brand::active()->orderBy('name')->get();
+
         if ($this->wantsFragment($request)) {
             return $this->fragment(
                 swap: [
                     '#catalog-results' => view('shop.partials.catalog-results', ['products' => $products])->render(),
                     '#catalog-count' => $products->total().' منتج',
+                    '#catalog-chips' => view('shop.partials.catalog-chips', [
+                        'brands' => $brands,
+                        'category' => $context['category'],
+                    ])->render(),
                 ],
                 extra: ['url' => $request->fullUrl()],
             );
@@ -76,15 +103,22 @@ class CatalogController extends Controller
         return view('shop.catalog', [
             'products' => $products,
             'categories' => Category::tree(onlyActive: true),
-            'brands' => Brand::active()->orderBy('name')->get(),
+            'brands' => $brands,
             ...$context,
         ]);
     }
 
+    /**
+     * The listing itself.
+     *
+     * There is no "in stock only" filter among these: Product::published()
+     * already has it, for every listing in the shop, so a checkbox offering it
+     * would have been a control that could not change anything.
+     */
     private function query(Request $request): Builder
     {
         return Product::published()
-            ->with('primaryImage', 'brand', 'variants')
+            ->with('primaryImage', 'images', 'brand', 'variants')
             ->when($request->string('q')->trim()->value(), fn (Builder $q, string $term) => $q
                 ->where(fn (Builder $w) => $w
                     ->where('name', 'like', "%{$term}%")
@@ -92,8 +126,6 @@ class CatalogController extends Controller
             ->when($request->input('brand'), fn (Builder $q, $brand) => $q->whereIn('brand_id', (array) $brand))
             ->when($request->input('min'), fn (Builder $q, $min) => $q->where('base_price', '>=', (float) $min))
             ->when($request->input('max'), fn (Builder $q, $max) => $q->where('base_price', '<=', (float) $max))
-            ->when($request->boolean('in_stock'), fn (Builder $q) => $q
-                ->whereHas('variants', fn (Builder $v) => $v->where('stock_quantity', '>', 0)))
             ->when($request->input('sort'), function (Builder $q, string $sort) {
                 return match ($sort) {
                     'price_asc' => $q->orderBy('base_price'),

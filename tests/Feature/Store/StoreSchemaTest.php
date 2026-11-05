@@ -21,9 +21,8 @@ use App\Models\ShippingZone;
 use App\Models\User;
 use Database\Seeders\AttributeSeeder;
 use Database\Seeders\EgyptLocationSeeder;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class StoreSchemaTest extends TestCase
@@ -90,11 +89,59 @@ class StoreSchemaTest extends TestCase
         $this->assertFalse($redXl->isLowStock());
     }
 
+    public function test_the_cached_product_stock_follows_its_variants(): void
+    {
+        $product = $this->makeProductWithVariants();
+        $redXl = $product->variants->firstWhere('sku', 'TSH-RED-XL');
+
+        // Checkout and Order::restoreStock() move stock with decrement() and
+        // increment(), which fire updated but never saved — the paths most
+        // likely to leave the cached column behind.
+        $redXl->decrement('stock_quantity', 5);
+        $this->assertSame(6, $product->refresh()->totalStock());
+
+        $redXl->increment('stock_quantity', 5);
+        $this->assertSame(11, $product->refresh()->totalStock());
+
+        $spare = ProductVariant::create([
+            'product_id' => $product->id, 'sku' => 'TSH-SPARE', 'price' => 200, 'stock_quantity' => 4,
+        ]);
+        $this->assertSame(15, $product->refresh()->totalStock());
+
+        // Moving a variant recounts both ends.
+        $other = Product::create([
+            'category_id' => $product->category_id,
+            'name' => 'بنطلون قطن',
+            'slug' => 'cotton-trousers',
+            'base_price' => 400,
+        ]);
+
+        $spare->update(['product_id' => $other->id]);
+        $this->assertSame(11, $product->refresh()->totalStock());
+        $this->assertSame(4, $other->refresh()->totalStock());
+
+        $spare->delete();
+        $this->assertSame(0, $other->refresh()->totalStock());
+        $this->assertFalse($other->isInStock());
+
+        // The catalogue filter reads the column, so it has to agree.
+        $this->assertTrue(Product::inStock()->whereKey($product->id)->exists());
+        $this->assertFalse(Product::inStock()->whereKey($other->id)->exists());
+
+        // A query-builder update is the one path the observer cannot see;
+        // recountStock() is the documented repair.
+        ProductVariant::where('product_id', $product->id)->update(['stock_quantity' => 1]);
+        $this->assertSame(11, $product->refresh()->totalStock());
+
+        Product::recountStock([$product->id]);
+        $this->assertSame(2, $product->refresh()->totalStock());
+    }
+
     public function test_a_variant_sku_must_be_unique(): void
     {
         $product = $this->makeProductWithVariants();
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         ProductVariant::create([
             'product_id' => $product->id, 'sku' => 'TSH-RED-XL', 'price' => 10,
@@ -281,7 +328,7 @@ class StoreSchemaTest extends TestCase
         $this->assertTrue($review->fresh()->is_approved);
         $this->assertCount(1, $product->fresh()->approvedReviews);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
         Review::create(['product_id' => $product->id, 'user_id' => $user->id, 'rating' => 1]);
     }
 
@@ -294,7 +341,7 @@ class StoreSchemaTest extends TestCase
         $this->assertCount(1, $user->fresh()->wishlist);
         $this->assertCount(1, $product->fresh()->wishlistedBy);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
         $user->wishlist()->attach($product->id);
     }
 

@@ -15,6 +15,8 @@ class DatabaseSeeder extends Seeder
             StaffSeeder::class,
             EgyptLocationSeeder::class,
             SettingSeeder::class,
+            // Draft about/privacy/terms copy; the panel owns them after this.
+            PageSeeder::class,
 
             // The floukaa.com catalogue. It owns the attributes too — its
             // variation options (مقاس الخاتم، طول السلسلة) are the shop's own,

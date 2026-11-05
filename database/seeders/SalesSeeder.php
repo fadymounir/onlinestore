@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Enums\CouponType;
+use App\Enums\DepositStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Models\Admin;
 use App\Models\Coupon;
 use App\Models\CouponRedemption;
@@ -12,8 +14,12 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Review;
 use App\Models\User;
+use App\Services\CheckoutService;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class SalesSeeder extends Seeder
 {
@@ -53,6 +59,7 @@ class SalesSeeder extends Seeder
     {
         $coupons = $this->seedCoupons();
         $admin = Admin::where('email', 'admin@admin.com')->first();
+        $receipt = $this->sampleReceipt();
 
         $customers = User::with('defaultAddress.governorate', 'defaultAddress.city')->get();
         $variants = ProductVariant::with('product', 'attributeValues')->where('is_active', true)->get();
@@ -85,8 +92,14 @@ class SalesSeeder extends Seeder
                 // Give roughly every third order a coupon.
                 $coupon = $orderIndex % 3 === 0 ? $coupons[$orderIndex % 5] : null;
 
+                // Every fourth order pays a deposit up front, and so does every
+                // order that ends cancelled, so the panel has one of each to
+                // work on: accepted, still under review, and owing a refund.
+                $isDeposit = $orderIndex % 4 === 1 || $orderIndex % 8 === 6;
+
                 DB::transaction(function () use (
-                    $customer, $address, $chosen, $coupon, $finalStatus, $note, $placedAt, $admin
+                    $customer, $address, $chosen, $coupon, $finalStatus, $note, $placedAt, $admin,
+                    $isDeposit, $receipt
                 ): void {
                     $subtotal = 0.0;
                     $lines = [];
@@ -135,6 +148,10 @@ class SalesSeeder extends Seeder
 
                     $order->items()->createMany($lines);
 
+                    if ($isDeposit) {
+                        $this->attachDeposit($order, $finalStatus, $admin, $receipt, $placedAt);
+                    }
+
                     if ($discount > 0) {
                         CouponRedemption::create([
                             'coupon_id' => $coupon->id,
@@ -147,6 +164,18 @@ class SalesSeeder extends Seeder
                     }
 
                     $this->walkToStatus($order, $finalStatus, $note, $admin);
+
+                    // A returned order was paid for and has been settled back;
+                    // a cancelled one is left owing, so the admin panel has a
+                    // refund to pay out.
+                    if ($finalStatus === OrderStatus::Returned && $order->awaitingRefund()) {
+                        $order->recordRefund(
+                            $order->refundableAmount(),
+                            'RFND-'.str_pad((string) $order->id, 6, '0', STR_PAD_LEFT),
+                            'رد المبلغ على نفس وسيلة الدفع.',
+                            $admin,
+                        );
+                    }
                 });
 
                 $orderIndex++;
@@ -156,7 +185,69 @@ class SalesSeeder extends Seeder
         $this->seedReviews();
     }
 
-    /** @return \Illuminate\Support\Collection<int, Coupon> */
+    /**
+     * Turns a seeded order into a deposit one. An order that got no further
+     * than pending keeps its receipt under review, so the panel has a deposit
+     * waiting on an admin; anything that moved on must have been accepted —
+     * Order::transitionTo() refuses to confirm an unapproved deposit.
+     */
+    private function attachDeposit(
+        Order $order,
+        OrderStatus $finalStatus,
+        ?Admin $admin,
+        string $receipt,
+        Carbon $placedAt,
+    ): void {
+        $total = round((float) $order->grand_total, 2);
+        // Whole pounds, the same figure checkout would offer as its minimum.
+        [$amount] = app(CheckoutService::class)->depositWindow($total);
+
+        $order->forceFill([
+            'payment_method' => PaymentMethod::Deposit,
+            'deposit_percent' => $total > 0 ? round($amount / $total * 100, 2) : 100,
+            'deposit_amount' => $amount,
+            'deposit_receipt_path' => $receipt,
+            'deposit_reference' => 'TRX-'.str_pad((string) $order->id, 6, '0', STR_PAD_LEFT),
+            'deposit_status' => DepositStatus::Submitted,
+            'deposit_submitted_at' => $placedAt,
+        ])->save();
+
+        if ($finalStatus !== OrderStatus::Pending) {
+            $order->approveDeposit($admin);
+        }
+    }
+
+    /**
+     * One placeholder receipt image shared by every seeded deposit — the demo
+     * needs something to open, not twenty copies of the same drawing.
+     */
+    private function sampleReceipt(): string
+    {
+        $path = CheckoutService::RECEIPT_DIRECTORY.'/sample-transfer-receipt.svg';
+        $disk = Storage::disk(Order::RECEIPT_DISK);
+
+        if (! $disk->exists($path)) {
+            $disk->put($path, <<<'SVG'
+                <svg xmlns="http://www.w3.org/2000/svg" width="420" height="260" viewBox="0 0 420 260">
+                    <rect width="420" height="260" fill="#faf8f5"/>
+                    <rect x="16" y="16" width="388" height="228" rx="12" fill="#fff" stroke="#efd8ab"/>
+                    <text x="210" y="80" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#8b501f">
+                        إيصال تحويل (نموذج)
+                    </text>
+                    <text x="210" y="130" text-anchor="middle" font-family="sans-serif" font-size="15" fill="#57534e">
+                        بيانات تجريبية من السيدر
+                    </text>
+                    <text x="210" y="170" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#a8a29e">
+                        Sample deposit transfer receipt
+                    </text>
+                </svg>
+                SVG);
+        }
+
+        return $path;
+    }
+
+    /** @return Collection<int, Coupon> */
     private function seedCoupons()
     {
         $coupons = collect();

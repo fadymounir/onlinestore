@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Observers\ProductVariantObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+#[ObservedBy(ProductVariantObserver::class)]
 class ProductVariant extends Model
 {
     protected $fillable = [

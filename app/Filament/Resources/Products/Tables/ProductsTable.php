@@ -52,10 +52,11 @@ class ProductsTable
                         ? 'لا يمكن شراء المنتج قبل إضافة متغيّر واحد على الأقل.'
                         : null),
 
-                // Summed in SQL rather than loading every variant row per product.
-                TextColumn::make('variants_sum_stock_quantity')
+                // Denormalised onto the product by ProductVariantObserver, so
+                // the column sorts and filters without a subquery per row.
+                TextColumn::make('total_stock')
                     ->label('المخزون')
-                    ->sum('variants', 'stock_quantity')
+                    ->sortable()
                     ->badge()
                     ->color(fn (?int $state): string => match (true) {
                         $state === null, $state <= 0 => 'danger',
@@ -115,10 +116,7 @@ class ProductsTable
 
                 Filter::make('out_of_stock')
                     ->label('نفد المخزون')
-                    ->query(fn (Builder $query): Builder => $query->whereDoesntHave(
-                        'variants',
-                        fn (Builder $q) => $q->where('stock_quantity', '>', 0),
-                    )),
+                    ->query(fn (Builder $query): Builder => $query->where('total_stock', '<=', 0)),
 
                 Filter::make('without_variants')
                     ->label('بدون متغيّرات')

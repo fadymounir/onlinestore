@@ -12,7 +12,7 @@
             <a href="{{ route('category', $category) }}"
                class="group/leaf flex items-center gap-2 py-0.5">
                 <x-category-thumb :category="$category" size="size-6" rounded="rounded-md" />
-                <span class="truncate text-[13px] text-stone-600 group-hover/leaf:text-amber-700">
+                <span class="truncate text-[13px] text-stone-600 group-hover/leaf:text-brand-700">
                     {{ $category->name }}
                 </span>
             </a>

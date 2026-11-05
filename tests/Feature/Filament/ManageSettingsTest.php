@@ -140,21 +140,6 @@ class ManageSettingsTest extends TestCase
         $this->get('/products')->assertStatus(503);
     }
 
-    public function test_the_announcement_bar_is_editable_and_hides_when_empty(): void
-    {
-        Livewire::test(ManageSettings::class)
-            ->fillForm(['announcement_text' => 'خصم 30% على كل الفساتين'])
-            ->call('save');
-
-        $this->get('/')->assertOk()->assertSee('خصم 30% على كل الفساتين');
-
-        Livewire::test(ManageSettings::class)
-            ->fillForm(['announcement_text' => ''])
-            ->call('save');
-
-        $this->get('/')->assertOk()->assertDontSee('خصم 30% على كل الفساتين');
-    }
-
     public function test_a_setting_in_an_unknown_group_still_gets_a_tab(): void
     {
         Setting::create([

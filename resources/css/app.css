@@ -1,11 +1,285 @@
 @import 'tailwindcss';
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
+/*
+|------------------------------------------------------------------------------
+| Design tokens
+|------------------------------------------------------------------------------
+| The storefront sells jewellery and accessories, so the palette is a warm
+| gold over a paper-coloured ground rather than Tailwind's stock amber over
+| white: gold reads as the metal in the photographs, and the paper tone keeps
+| product shots — nearly all of them shot on white — from dissolving into the
+| page.
+|
+| Everything below is a `@theme` token, which means Tailwind generates the
+| matching utilities (`bg-brand-600`, `shadow-soft`, `animate-rise`), so the
+| Blade templates stay in plain utility classes.
+*/
 @theme {
     --font-sans: 'Cairo', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Warm gold. 600 is the action colour, 700 the text-on-paper colour — the
+       lighter steps fail contrast against anything but ink. */
+    --color-brand-50: #fdf8ef;
+    --color-brand-100: #f8edd6;
+    --color-brand-200: #efd8ab;
+    --color-brand-300: #e3bd77;
+    --color-brand-400: #d79f4b;
+    --color-brand-500: #c9872f;
+    --color-brand-600: #ad6a22;
+    --color-brand-700: #8b501f;
+    --color-brand-800: #714020;
+    --color-brand-900: #5e361e;
+    --color-brand-950: #351b0d;
+
+    /* Paper: the page ground, a half-step warmer than stone-50. */
+    --color-paper: #faf8f5;
+
+    /* Ink: the dark surfaces — header announcement, footer, overlays. */
+    --color-ink: #1c1917;
+
+    /* Two elevations, both tinted with the ink so shadows stay warm instead of
+       turning the grey that pure-black shadows give a cream page. */
+    --shadow-soft: 0 1px 2px rgb(28 25 23 / 0.04), 0 10px 30px -18px rgb(28 25 23 / 0.25);
+    --shadow-lift: 0 2px 4px rgb(28 25 23 / 0.04), 0 18px 40px -20px rgb(28 25 23 / 0.3);
+
+    --animate-rise: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    /* Most of this shop's traffic is on a phone, and Cairo has a small
+       x-height: Tailwind's stock 12/14/16px steps read a size smaller in
+       Arabic than they do in Latin. Each step goes up roughly 1px, with the
+       looser line-heights Arabic needs for its diacritics. */
+    --text-xs: 0.8125rem;
+    --text-xs--line-height: 1.55;
+    --text-sm: 0.9375rem;
+    --text-sm--line-height: 1.65;
+    --text-base: 1.0625rem;
+    --text-base--line-height: 1.75;
+}
+
+@keyframes rise {
+    from {
+        opacity: 0;
+        transform: translateY(0.75rem);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/*
+|------------------------------------------------------------------------------
+| Utilities
+|------------------------------------------------------------------------------
+*/
+
+/* A row that scrolls sideways under the thumb and parks each item under it.
+   Used for the category rail and the product shelves on a phone. */
+@utility snap-row {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 1rem;
+    overscroll-behavior-x: contain;
+}
+
+@utility snap-row-item {
+    scroll-snap-align: start;
+    flex: none;
+}
+
+/* Scrollbars are noise on a rail that already shows its overflow by clipping a
+   card mid-edge. The row stays keyboard- and wheel-scrollable. */
+@utility no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+/* The hero's ground: two soft gold pools over paper. Cheaper than an image and
+   it never has to be art-directed for a new breakpoint. */
+@utility hero-mesh {
+    background-color: var(--color-brand-50);
+    background-image:
+        radial-gradient(60% 80% at 85% 10%, rgb(217 160 75 / 0.35), transparent 60%),
+        radial-gradient(50% 70% at 10% 90%, rgb(28 25 23 / 0.12), transparent 60%);
+}
+
+/*
+|------------------------------------------------------------------------------
+| Header
+|------------------------------------------------------------------------------
+| The bar is flat while the page is at the top and grows a shadow once content
+| slides under it — see the `chrome` section of resources/js/app.js, which adds
+| the class. Without JS the header is simply always flat, which is the state it
+| spends most of its life in anyway.
+*/
+.site-header {
+    transition:
+        box-shadow 200ms ease-out,
+        background-color 200ms ease-out;
+}
+
+.site-header.is-stuck {
+    box-shadow: var(--shadow-soft);
+}
+
+/* Sections fade up as they come into view. Gated behind `js-reveal`, which
+   app.js puts on <html> only once it knows it can observe them: with no
+   JavaScript — or no IntersectionObserver — the rule never applies and the
+   sections render plainly, instead of sitting at opacity 0 forever. */
+.js-reveal .reveal {
+    opacity: 0;
+    transform: translateY(1.25rem);
+    transition:
+        opacity 600ms cubic-bezier(0.22, 1, 0.36, 1),
+        transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.js-reveal .reveal.is-revealed {
+    opacity: 1;
+    transform: none;
+}
+
+/*
+|------------------------------------------------------------------------------
+| First-paint loader
+|------------------------------------------------------------------------------
+| A branded screen over the page while it loads — most of this shop's traffic
+| is on a phone, often on mobile data, where a product grid can take a second
+| or two to become something worth looking at.
+|
+| Two details keep it from being the usual preloader nuisance:
+|
+|   it is late      the reveal is delayed a quarter-second, so a fast load
+|                   never flashes it — the page simply appears
+|   it is gated     the `js` class comes from one inline line in <head>, so a
+|                   visitor without JavaScript never sees a screen that has
+|                   nothing to remove it. app.js also drops it on a 4s timer,
+|                   whatever the page is still waiting for.
+*/
+.app-preloader {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
+    background: var(--color-paper);
+    opacity: 0;
+    visibility: hidden;
+}
+
+.js .app-preloader {
+    visibility: visible;
+    animation: app-preloader-in 250ms 250ms both;
+}
+
+.js .app-preloader.is-done {
+    animation: none;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        opacity 350ms ease-out,
+        visibility 0s linear 350ms;
+}
+
+@keyframes app-preloader-in {
+    to {
+        opacity: 1;
+    }
+}
+
+.app-preloader__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* The logo breathes rather than spins: a mark that rotates reads as a
+   generic throbber, and this one is the shop's badge. */
+.app-preloader__logo {
+    inline-size: 4.5rem;
+    block-size: 4.5rem;
+    /* The badge is a circle; a rounded square would frame it in its own
+       shadow. */
+    border-radius: 999px;
+    box-shadow: var(--shadow-lift);
+    animation: app-preloader-breathe 1.8s ease-in-out infinite;
+}
+
+.app-preloader__name {
+    font-size: 1.0625rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--color-stone-900);
+}
+
+/* An indeterminate track: the page cannot say how far along it is, so the bar
+   travels rather than fills. */
+.app-preloader__track {
+    position: relative;
+    overflow: hidden;
+    inline-size: 7.5rem;
+    block-size: 3px;
+    border-radius: 999px;
+    background: var(--color-brand-100);
+}
+
+.app-preloader__bar {
+    position: absolute;
+    inset-block: 0;
+    inline-size: 45%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--color-brand-400), var(--color-brand-600));
+    animation: app-preloader-slide 1.1s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes app-preloader-breathe {
+    50% {
+        transform: scale(1.06);
+    }
+}
+
+@keyframes app-preloader-slide {
+    from {
+        inset-inline-start: -45%;
+    }
+    to {
+        inset-inline-start: 100%;
+    }
+}
+
+/*
+|------------------------------------------------------------------------------
+| The phone's buy bar
+|------------------------------------------------------------------------------
+| On a product page a fixed bar carries the price and "add to cart". It would
+| be a duplicate of the buy box while that box is on screen, so it slides away
+| whenever the real control is visible. Gated behind `js-buybar`, which app.js
+| sets only once it has an observer: with no JavaScript the bar simply stays
+| put, which is the safe state.
+*/
+.js-buybar [data-buybar] {
+    transform: translateY(110%);
+    transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.js-buybar [data-buybar].is-shown {
+    transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .js-buybar [data-buybar] {
+        transition: none;
+    }
 }
 
 /*
@@ -26,7 +300,8 @@
     z-index: 100;
     block-size: 3px;
     inline-size: 0;
-    background: linear-gradient(90deg, var(--color-amber-500), var(--color-amber-300));
+    background: linear-gradient(90deg, var(--color-brand-600), var(--color-brand-300));
+    box-shadow: 0 0 10px rgb(201 135 47 / 0.6);
     opacity: 0;
     pointer-events: none;
 }
@@ -53,6 +328,41 @@
     }
     100% {
         inline-size: 90%;
+    }
+}
+
+/* A page visit in flight. The progress bar above is the signal; this only
+   tells the pointer that the click was heard, which matters on the one
+   navigation that is slow enough to wonder about. */
+.is-visiting {
+    cursor: progress;
+}
+
+/* The arriving page, fading up over its own first frames. Short on purpose:
+   long enough to read as a page turn, short enough that a shopper tapping
+   through a catalogue never waits on it. Nothing fades out — see fadeInMain()
+   in resources/js/app.js. */
+.is-page-in {
+    animation: app-page-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes app-page-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* The swap itself is the information; the movement is decoration. Asked not to
+   move things, the new page simply appears — which is what it did before the
+   AJAX layer existed. */
+@media (prefers-reduced-motion: reduce) {
+    .is-page-in {
+        animation: none;
     }
 }
 
@@ -112,21 +422,320 @@
     cursor: progress;
 }
 
-/* A region waiting for its replacement. Kept subtle — the progress bar is the
-   real signal, this only stops the stale content looking interactive. */
-.is-swapping {
-    opacity: 0.45;
-    transition: opacity 120ms ease-out;
-    pointer-events: none;
-}
-
 /* The wishlist heart fills once the server confirms the product went in. */
 .is-active svg {
     fill: currentColor;
     color: var(--color-red-600);
 }
 
+/*
+|------------------------------------------------------------------------------
+| Loading states
+|------------------------------------------------------------------------------
+| Four shapes of "working on it", picked by how much of the page is about to
+| move. The top bar above fires for every request; these three are about the
+| part of the page that is actually waiting:
+|
+|   skeleton cards   the product grid, whose whole contents are replaced
+|   a panel spinner  the cart, whose old totals stay worth reading
+|   a control spinner  the button that was pressed, so feedback is at the click
+|
+| All of it is created in resources/js/app.js, so the class names live here as
+| plain CSS — Tailwind's scanner would never see them in a JS template string.
+*/
+
+/* A region mid-swap. Two flavours: `--replace` hands the space over to a
+   skeleton, `--dim` keeps the stale content legible underneath a spinner. */
+.is-swapping {
+    position: relative;
+}
+
+.is-swapping--replace > :not(.app-skeleton) {
+    display: none;
+}
+
+.is-swapping--dim > :not(.app-skeleton) {
+    opacity: 0.4;
+    pointer-events: none;
+    transition: opacity 120ms ease-out;
+}
+
+/* The shimmer: a pale highlight travelling across a stone block. The gradient
+   is 300% wide so the sweep has somewhere to travel from and to. */
+.app-skeleton__box {
+    border-radius: 0.5rem;
+    background: linear-gradient(
+        90deg,
+        var(--color-stone-200) 0%,
+        var(--color-stone-100) 50%,
+        var(--color-stone-200) 100%
+    );
+    background-size: 300% 100%;
+    animation: app-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes app-shimmer {
+    from {
+        background-position: 150% 0;
+    }
+    to {
+        background-position: -150% 0;
+    }
+}
+
+/* Product-grid placeholder. Mirrors the real grid — two columns at a phone's
+   0.75rem gutter, three at 1.25rem from the `sm` breakpoint — so nothing jumps
+   when the real cards land in its place. */
+.app-skeleton--grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+@media (width >= 40rem) {
+    .app-skeleton--grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.25rem;
+    }
+}
+
+/* Used two ways: as a whole grid of them while a filter re-renders the
+   listing, and as four trailing the real grid while its next page is in
+   flight. In the second case they sit inside the real grid and inherit its
+   columns and gutters, which is why nothing here sets any. */
+.app-skeleton__card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow: hidden;
+    border-radius: 1.5rem;
+    background: #fff;
+    box-shadow: var(--shadow-soft);
+    padding-block-end: 1rem;
+}
+
+/* 3/4 and square corners: the aspect and shape of the real card's image. */
+.app-skeleton__media {
+    aspect-ratio: 3 / 4;
+    border-radius: 0;
+}
+
+.app-skeleton__line {
+    block-size: 0.75rem;
+    margin-inline: 1rem;
+}
+
+.app-skeleton__line--brand {
+    inline-size: 35%;
+}
+
+.app-skeleton__line--title {
+    inline-size: 85%;
+}
+
+.app-skeleton__line--price {
+    inline-size: 50%;
+}
+
+/* A navigation in flight. The page being left stays on screen and legible
+   underneath — it is still the answer to the last thing the shopper asked —
+   with the spinner centred in the viewport rather than in the document, so it
+   is found at once however far down the page the click happened.
+
+   Held back 200ms by resources/js/app.js, so a prefetched page never shows it. */
+.app-skeleton--page {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+/* Something to read the spinner against, whatever it happens to land on. */
+.app-skeleton--page .app-spinner {
+    background: color-mix(in srgb, var(--color-paper) 85%, transparent);
+    box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.25);
+}
+
+/* The cart's spinner floats over the dimmed totals. Pinned near the top rather
+   than centred: on a long cart the middle can be off-screen, and the row the
+   shopper just touched is up here. */
+.app-skeleton--panel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-block-start: 3rem;
+    pointer-events: none;
+}
+
+.app-spinner {
+    inline-size: 2rem;
+    block-size: 2rem;
+    border: 3px solid var(--color-stone-300);
+    border-block-start-color: var(--color-brand-500);
+    border-radius: 50%;
+    animation: app-spin 700ms linear infinite;
+}
+
+@keyframes app-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* A control mid-request: visibly inert, but holding its size so the layout
+   does not jump. */
+.is-busy {
+    opacity: 0.55;
+    cursor: progress;
+}
+
+/* A labelled control keeps its label and grows a spinner beside it. Icon-only
+   controls get `is-busy` alone — a second circle inside a 20px heart would read
+   as breakage, not progress — so app.js adds this class only when there is
+   text to sit next to. */
+.is-busy--spinner::after {
+    content: '';
+    display: inline-block;
+    inline-size: 0.875em;
+    block-size: 0.875em;
+    margin-inline-start: 0.5em;
+    vertical-align: -0.1em;
+    border: 2px solid currentColor;
+    border-block-start-color: transparent;
+    border-radius: 50%;
+    animation: app-spin 600ms linear infinite;
+}
+
+/*
+|------------------------------------------------------------------------------
+| Checkout — payment methods
+|------------------------------------------------------------------------------
+| The deposit option opens a panel (transfer details, receipt upload) that
+| belongs to one radio out of several. There is no component framework in this
+| build and the page must work with JavaScript off, so the radio's own :checked
+| state drives it:
+|
+|   - the panel is visible by default, and hidden only once a DIFFERENT method
+|     is checked. A browser without :has() therefore shows it — an extra open
+|     panel, never a form the customer cannot fill in.
+|   - the selected card's highlight is CSS too, not a server-rendered class, so
+|     it follows the click instead of waiting for a round trip.
+*/
+.payment-methods > label {
+    border-color: var(--color-stone-200);
+}
+
+.payment-methods > label:hover {
+    box-shadow: var(--shadow-lift);
+}
+
+.payment-methods > label:has(input:checked) {
+    border-color: var(--color-brand-600);
+    background-color: color-mix(in oklab, var(--color-brand-50) 50%, transparent);
+}
+
+.payment-methods:has(input[name='payment_method']:checked:not([value='deposit'])) .payment-deposit {
+    display: none;
+}
+
+/*
+|------------------------------------------------------------------------------
+| Managed page content — see App\Models\Page
+|------------------------------------------------------------------------------
+| Filament's rich editor emits plain semantic HTML, and this build has no
+| typography plugin, so the storefront styles those tags itself. Scoped to
+| .prose-shop so admin-authored markup cannot restyle the rest of the page.
+*/
+.prose-shop {
+    color: var(--color-stone-700);
+    line-height: 1.9;
+}
+
+.prose-shop > * + * {
+    margin-block-start: 1rem;
+}
+
+.prose-shop h2,
+.prose-shop h3 {
+    color: var(--color-stone-900);
+    font-weight: 700;
+    margin-block-start: 2rem;
+}
+
+.prose-shop h2 {
+    font-size: 1.25rem;
+}
+
+.prose-shop h3 {
+    font-size: 1.0625rem;
+}
+
+.prose-shop ul,
+.prose-shop ol {
+    padding-inline-start: 1.5rem;
+}
+
+.prose-shop ul {
+    list-style: disc;
+}
+
+.prose-shop ol {
+    list-style: decimal;
+}
+
+.prose-shop li + li {
+    margin-block-start: 0.375rem;
+}
+
+.prose-shop a {
+    color: var(--color-brand-700);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.prose-shop strong {
+    color: var(--color-stone-900);
+    font-weight: 700;
+}
+
+.prose-shop blockquote {
+    border-inline-start: 3px solid var(--color-brand-400);
+    padding-inline-start: 1rem;
+    color: var(--color-stone-600);
+    font-style: normal;
+}
+
+.prose-shop hr {
+    border-color: var(--color-stone-200);
+    margin-block: 2rem;
+}
+
+.prose-shop img {
+    max-inline-size: 100%;
+    border-radius: 0.75rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
+    .app-preloader__logo {
+        animation: none;
+    }
+
+    .app-preloader__bar {
+        animation-duration: 2.4s;
+    }
+
+    /* The reveal still happens — a section that never appears is worse than
+       one that appears without travelling — it just stops moving. */
+    .js-reveal .reveal {
+        transform: none;
+        transition: opacity 200ms linear;
+    }
+
     .app-loader.is-loading {
         animation: none;
         inline-size: 60%;
@@ -135,5 +744,17 @@
     .app-toast {
         transform: none;
         transition: opacity 120ms linear;
+    }
+
+    /* The skeleton still reads as a placeholder standing still; a spinner does
+       not, so slow it down rather than freezing it mid-arc. */
+    .app-skeleton__box {
+        animation: none;
+        background: var(--color-stone-200);
+    }
+
+    .app-spinner,
+    .is-busy--spinner::after {
+        animation-duration: 2.4s;
     }
 }

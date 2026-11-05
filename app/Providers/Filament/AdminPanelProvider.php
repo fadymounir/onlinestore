@@ -47,6 +47,7 @@ class AdminPanelProvider extends PanelProvider
                 'الكتالوج',
                 'المبيعات',
                 'الشحن والتوصيل',
+                'المحتوى',
                 'إدارة النظام',
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')

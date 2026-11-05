@@ -11,7 +11,6 @@ class SettingSeeder extends Seeder
     private const SETTINGS = [
         ['store_name', 'اسم المتجر', 'Simple', 'string', 'general'],
         ['store_tagline', 'الشعار النصي', 'تسوّق بسهولة من أي مكان في مصر', 'string', 'general'],
-        ['announcement_text', 'شريط الإعلان أعلى الموقع', 'الشحن مجاناً للطلبات فوق 1500 ج.م داخل القاهرة الكبرى', 'string', 'general'],
         ['store_logo', 'شعار المتجر', null, 'image', 'general'],
         ['store_email', 'البريد الإلكتروني', 'info@simple.test', 'string', 'contact'],
         ['store_phone', 'رقم الهاتف', '01000000000', 'string', 'contact'],
@@ -24,6 +23,11 @@ class SettingSeeder extends Seeder
         ['currency_symbol', 'رمز العملة', 'ج.م', 'string', 'checkout'],
         ['min_order_total', 'الحد الأدنى للطلب', '100', 'number', 'checkout'],
         ['cod_enabled', 'تفعيل الدفع عند الاستلام', '1', 'boolean', 'checkout'],
+        ['deposit_enabled', 'تفعيل الدفع بعربون (تحويل بنكي)', '1', 'boolean', 'checkout'],
+        ['deposit_percent', 'الحد الأدنى للعربون % من إجمالي الطلب', '20', 'number', 'checkout'],
+        ['deposit_instructions', 'بيانات التحويل الظاهرة للعميل', "حوّل قيمة العربون على أحد الحسابات التالية ثم ارفع صورة الإيصال:\n"
+            ."• إنستاباي / محفظة: 01000000000\n"
+            .'• حساب بنكي: Simple Store — 1000 0000 0000 0000', 'text', 'checkout'],
         ['low_stock_alert', 'تنبيه قرب نفاد المخزون', '5', 'number', 'inventory'],
         ['reviews_need_approval', 'مراجعة التقييمات قبل النشر', '1', 'boolean', 'reviews'],
         ['maintenance_mode', 'وضع الصيانة', '0', 'boolean', 'general'],

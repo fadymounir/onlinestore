@@ -16,7 +16,7 @@ class RolePermissionSeeder extends Seeder
     private const RESOURCES = [
         'products', 'categories', 'brands', 'variants', 'orders',
         'customers', 'coupons', 'reviews', 'shipping', 'settings',
-        'admins', 'roles',
+        'pages', 'admins', 'roles',
     ];
 
     private const ABILITIES = ['view', 'create', 'update', 'delete'];
@@ -28,6 +28,7 @@ class RolePermissionSeeder extends Seeder
             'products' => '*', 'categories' => '*', 'brands' => '*', 'variants' => '*',
             'orders' => '*', 'customers' => ['view', 'update'], 'coupons' => '*',
             'reviews' => '*', 'shipping' => '*', 'settings' => ['view', 'update'],
+            'pages' => '*',
         ],
         'مسؤول المخزون' => [
             'products' => ['view', 'update'], 'variants' => ['view', 'create', 'update'],

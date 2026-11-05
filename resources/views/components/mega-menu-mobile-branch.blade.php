@@ -12,7 +12,7 @@
         <li>
             @if ($category->children->isEmpty())
                 <a href="{{ route('category', $category) }}"
-                   class="flex items-center gap-2.5 py-2 text-sm text-stone-700 hover:text-amber-700">
+                   class="flex items-center gap-2.5 py-2 text-sm text-stone-700 hover:text-brand-700">
                     <x-category-thumb :category="$category" size="size-8" />
                     {{ $category->name }}
                 </a>
@@ -30,7 +30,7 @@
 
                     <div class="border-s border-stone-100 ps-3">
                         <a href="{{ route('category', $category) }}"
-                           class="block py-2 text-xs font-semibold text-amber-700 hover:text-amber-800">
+                           class="block py-2 text-xs font-semibold text-brand-700 hover:text-brand-800">
                             تصفّح كل {{ $category->name }}
                         </a>
 

@@ -36,7 +36,7 @@ class ProductController extends Controller
             'related' => Product::published()
                 ->where('category_id', $product->category_id)
                 ->whereKeyNot($product->id)
-                ->with('primaryImage', 'brand', 'variants')
+                ->with('primaryImage', 'images', 'brand', 'variants')
                 ->take(4)
                 ->get(),
         ]);

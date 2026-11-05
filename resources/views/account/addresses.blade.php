@@ -1,9 +1,9 @@
-@extends('layouts.shop')
+@extends($shopLayout ?? 'layouts.shop')
 
 @section('title', 'عناويني')
 
 @section('content')
-    <h1 class="mb-6 text-2xl font-bold text-stone-900">عناويني</h1>
+    <h1 class="mb-6 text-2xl font-extrabold tracking-tight text-stone-900 sm:text-3xl">عناويني</h1>
 
     <div class="grid gap-8 lg:grid-cols-[1fr_420px]">
         {{-- saved --}}
@@ -11,7 +11,7 @@
             @forelse ($addresses as $address)
                 <div @class([
                     'rounded-2xl border bg-white p-5',
-                    'border-amber-500' => $address->is_default,
+                    'border-brand-500' => $address->is_default,
                     'border-stone-200' => ! $address->is_default,
                 ])>
                     <div class="flex flex-wrap items-start justify-between gap-3">
@@ -22,7 +22,7 @@
                                     <span class="ms-2 rounded bg-stone-100 px-1.5 py-0.5 text-[11px] font-medium text-stone-600">{{ $address->label }}</span>
                                 @endif
                                 @if ($address->is_default)
-                                    <span class="ms-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800">افتراضي</span>
+                                    <span class="ms-1 rounded bg-brand-100 px-1.5 py-0.5 text-[11px] font-semibold text-brand-800">افتراضي</span>
                                 @endif
                             </p>
                             <p class="mt-2 text-sm text-stone-600">{{ $address->fullAddress() }}</p>
@@ -34,7 +34,7 @@
 
                         <div class="flex items-center gap-2">
                             <a href="{{ route('account.addresses.edit', $address) }}"
-                               class="rounded-lg border border-stone-300 px-3 py-1.5 text-xs text-stone-700 hover:bg-stone-100">
+                               class="rounded-xl border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs text-stone-700 hover:bg-stone-100">
                                 تعديل
                             </a>
                             <form action="{{ route('account.addresses.destroy', $address) }}" method="POST">
@@ -57,7 +57,7 @@
         {{-- form --}}
         <aside>
             <form action="{{ $editing ? route('account.addresses.update', $editing) : route('account.addresses.store') }}"
-                  method="POST" class="space-y-4 rounded-2xl border border-stone-200 bg-white p-5">
+                  method="POST" class="space-y-4 rounded-3xl bg-white p-6 shadow-soft">
                 @csrf
                 @if ($editing)
                     @method('PUT')
@@ -69,34 +69,34 @@
                     <div class="sm:col-span-2">
                         <label class="mb-1 block text-sm font-medium text-stone-700">وسم العنوان</label>
                         <input type="text" name="label" value="{{ old('label', $editing?->label) }}" placeholder="المنزل / العمل"
-                               class="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-amber-600">
+                               class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
                     </div>
 
                     <div>
                         <label class="mb-1 block text-sm font-medium text-stone-700">اسم المستلم *</label>
                         <input type="text" name="recipient_name" required
                                value="{{ old('recipient_name', $editing?->recipient_name ?? auth()->user()->name) }}"
-                               class="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-amber-600">
+                               class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
                     </div>
 
                     <div>
                         <label class="mb-1 block text-sm font-medium text-stone-700">رقم الموبايل *</label>
                         <input type="tel" name="phone" required dir="ltr" placeholder="01012345678"
                                value="{{ old('phone', $editing?->phone ?? auth()->user()->phone) }}"
-                               class="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-amber-600">
+                               class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
                     </div>
 
                     <div>
                         <label class="mb-1 block text-sm font-medium text-stone-700">هاتف بديل</label>
                         <input type="tel" name="alternate_phone" dir="ltr"
                                value="{{ old('alternate_phone', $editing?->alternate_phone) }}"
-                               class="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-amber-600">
+                               class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
                     </div>
 
                     <div>
                         <label for="governorate_id" class="mb-1 block text-sm font-medium text-stone-700">المحافظة *</label>
                         <select name="governorate_id" id="governorate_id" required
-                                class="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-amber-600">
+                                class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
                             <option value="">اختر المحافظة</option>
                             @foreach ($governorates as $governorate)
                                 <option value="{{ $governorate->id }}"
@@ -110,7 +110,7 @@
                     <div class="sm:col-span-2">
                         <label for="city_id" class="mb-1 block text-sm font-medium text-stone-700">المدينة</label>
                         <select name="city_id" id="city_id"
-                                class="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-amber-600">
+                                class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
                             <option value="">اختر المدينة</option>
                             @foreach ($governorates as $governorate)
                                 <optgroup label="{{ $governorate->name }}">
@@ -129,25 +129,25 @@
                     <div class="sm:col-span-2">
                         <label class="mb-1 block text-sm font-medium text-stone-700">الشارع *</label>
                         <input type="text" name="street" required value="{{ old('street', $editing?->street) }}"
-                               class="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-amber-600">
+                               class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
                     </div>
 
                     <div>
                         <label class="mb-1 block text-sm font-medium text-stone-700">العقار</label>
                         <input type="text" name="building" value="{{ old('building', $editing?->building) }}"
-                               class="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-amber-600">
+                               class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="mb-1 block text-sm font-medium text-stone-700">الدور</label>
                             <input type="text" name="floor" value="{{ old('floor', $editing?->floor) }}"
-                                   class="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-amber-600">
+                                   class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
                         </div>
                         <div>
                             <label class="mb-1 block text-sm font-medium text-stone-700">الشقة</label>
                             <input type="text" name="apartment" value="{{ old('apartment', $editing?->apartment) }}"
-                                   class="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-amber-600">
+                                   class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
                         </div>
                     </div>
 
@@ -155,24 +155,24 @@
                         <label class="mb-1 block text-sm font-medium text-stone-700">علامة مميّزة</label>
                         <input type="text" name="landmark" value="{{ old('landmark', $editing?->landmark) }}"
                                placeholder="أمام / بجوار…"
-                               class="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-amber-600">
+                               class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
                     </div>
                 </div>
 
                 <label class="flex cursor-pointer items-center gap-2 text-sm text-stone-700">
                     <input type="checkbox" name="is_default" value="1"
                            @checked(old('is_default', $editing?->is_default))
-                           class="size-4 rounded border-stone-300 text-amber-600 focus:ring-amber-600">
+                           class="size-4 accent-brand-600">
                     اجعله العنوان الافتراضي
                 </label>
 
                 <div class="flex gap-2">
-                    <button type="submit" class="flex-1 rounded-lg bg-amber-600 px-6 py-3 font-semibold text-white hover:bg-amber-700">
+                    <button type="submit" class="flex-1 rounded-xl bg-stone-900 px-6 py-3 font-bold text-white transition hover:bg-stone-800">
                         {{ $editing ? 'حفظ التعديلات' : 'حفظ العنوان' }}
                     </button>
                     @if ($editing)
                         <a href="{{ route('account.addresses.index') }}"
-                           class="rounded-lg border border-stone-300 px-5 py-3 text-sm text-stone-700 hover:bg-stone-100">
+                           class="rounded-xl border border-stone-200 bg-stone-50 px-5 py-3 text-sm text-stone-700 hover:bg-stone-100">
                             إلغاء
                         </a>
                     @endif

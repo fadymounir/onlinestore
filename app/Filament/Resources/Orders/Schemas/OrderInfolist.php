@@ -2,12 +2,14 @@
 
 namespace App\Filament\Resources\Orders\Schemas;
 
+use App\Enums\DepositStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
+use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
@@ -43,7 +45,10 @@ class OrderInfolist
 
                         TextEntry::make('payment_method')
                             ->label('طريقة الدفع')
-                            ->formatStateUsing(fn (PaymentMethod $state): string => $state->label()),
+                            ->formatStateUsing(fn (PaymentMethod $state): string => $state->label())
+                            ->helperText(fn (Order $record): ?string => $record->isDeposit()
+                                ? $record->deliveryNote()
+                                : null),
 
                         TextEntry::make('placed_at')
                             ->label('تاريخ الطلب')
@@ -183,8 +188,132 @@ class OrderInfolist
                             ->weight(FontWeight::Bold)
                             ->size('lg')
                             ->color('primary'),
+
+                        TextEntry::make('remaining_amount')
+                            ->label('المتبقي للتحصيل')
+                            ->state(fn (Order $record): float => $record->remainingAmount())
+                            ->money('EGP')
+                            ->weight(FontWeight::Bold)
+                            ->color(fn (Order $record): string => $record->remainingAmount() > 0 ? 'warning' : 'success')
+                            ->helperText(fn (Order $record): string => $record->deliveryNote())
+                            ->columnSpanFull(),
                     ])
                     ->columns(4),
+
+                Section::make('العربون المقدّم')
+                    ->description('تحويل بنكي مُسبق من العميل — لا يُؤكَّد الطلب قبل اعتماده.')
+                    ->icon('heroicon-o-banknotes')
+                    ->visible(fn (Order $record): bool => $record->isDeposit())
+                    ->schema([
+                        TextEntry::make('deposit_status')
+                            ->label('حالة العربون')
+                            ->badge()
+                            ->formatStateUsing(fn (DepositStatus $state): string => $state->label())
+                            ->color(fn (DepositStatus $state): string => $state->color())
+                            ->icon(fn (DepositStatus $state): string => $state->icon())
+                            ->placeholder('—'),
+
+                        TextEntry::make('deposit_amount')
+                            ->label('المبلغ المحوَّل')
+                            ->money('EGP')
+                            ->weight(FontWeight::Bold)
+                            ->helperText(fn (Order $record): ?string => $record->deposit_percent
+                                ? rtrim(rtrim(number_format((float) $record->deposit_percent, 2), '0'), '.').'% من الإجمالي'
+                                : null),
+
+                        TextEntry::make('deposit_reference')
+                            ->label('رقم عملية التحويل')
+                            ->copyable()
+                            ->placeholder('لم يُذكر'),
+
+                        TextEntry::make('deposit_submitted_at')
+                            ->label('تاريخ رفع الإيصال')
+                            ->dateTime('Y-m-d H:i')
+                            ->placeholder('—'),
+
+                        TextEntry::make('depositReviewer.name')
+                            ->label('رُوجع بواسطة')
+                            ->placeholder('لم يُراجع بعد'),
+
+                        TextEntry::make('deposit_reviewed_at')
+                            ->label('تاريخ المراجعة')
+                            ->dateTime('Y-m-d H:i')
+                            ->placeholder('—'),
+
+                        TextEntry::make('deposit_rejection_reason')
+                            ->label('سبب الرفض')
+                            ->color('danger')
+                            ->columnSpanFull()
+                            ->visible(fn (Order $record): bool => filled($record->deposit_rejection_reason)),
+
+                        // The receipt itself: images preview inline, a PDF is a
+                        // link — Filament cannot render one in place.
+                        ImageEntry::make('deposit_receipt_path')
+                            ->label('إيصال التحويل')
+                            ->disk(Order::RECEIPT_DISK)
+                            ->height(260)
+                            ->extraImgAttributes(['class' => 'rounded-lg'])
+                            ->columnSpanFull()
+                            ->visible(fn (Order $record): bool => filled($record->deposit_receipt_path)
+                                && ! str_ends_with(strtolower((string) $record->deposit_receipt_path), '.pdf')),
+
+                        TextEntry::make('receipt_link')
+                            ->label('ملف الإيصال')
+                            ->state(fn (Order $record): string => filled($record->deposit_receipt_path)
+                                ? 'فتح الإيصال في تبويب جديد'
+                                : 'لم يُرفع إيصال')
+                            ->url(fn (Order $record): ?string => $record->depositReceiptUrl())
+                            ->openUrlInNewTab()
+                            ->color(fn (Order $record): string => filled($record->deposit_receipt_path) ? 'primary' : 'gray')
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(3),
+
+                Section::make('استرداد المبلغ')
+                    ->description('الطلب أُلغي أو ارتجع بعد أن دفع العميل — المبلغ يُرد إليه.')
+                    ->icon('heroicon-o-receipt-refund')
+                    ->visible(fn (Order $record): bool => $record->awaitingRefund() || $record->isRefunded())
+                    ->schema([
+                        TextEntry::make('refund_due')
+                            ->label('المستحق للعميل')
+                            ->state(fn (Order $record): float => $record->refundableAmount())
+                            ->money('EGP')
+                            ->weight(FontWeight::Bold)
+                            ->color('warning')
+                            ->helperText('لم يُسجَّل بعد — سجّله من زر «تسجيل استرداد المبلغ» بعد التحويل.')
+                            ->visible(fn (Order $record): bool => $record->awaitingRefund()),
+
+                        TextEntry::make('refund_amount')
+                            ->label('المبلغ المسترد')
+                            ->money('EGP')
+                            ->weight(FontWeight::Bold)
+                            ->color('success')
+                            ->visible(fn (Order $record): bool => $record->isRefunded()),
+
+                        TextEntry::make('refunded_at')
+                            ->label('تاريخ الاسترداد')
+                            ->dateTime('Y-m-d H:i')
+                            ->placeholder('—')
+                            ->visible(fn (Order $record): bool => $record->isRefunded()),
+
+                        TextEntry::make('refundIssuer.name')
+                            ->label('نُفِّذ بواسطة')
+                            ->placeholder('النظام')
+                            ->visible(fn (Order $record): bool => $record->isRefunded()),
+
+                        TextEntry::make('refund_reference')
+                            ->label('رقم عملية التحويل')
+                            ->copyable()
+                            ->placeholder('لم يُذكر')
+                            ->visible(fn (Order $record): bool => $record->isRefunded()),
+
+                        TextEntry::make('refund_note')
+                            ->label('ملاحظة الاسترداد')
+                            ->placeholder('—')
+                            ->columnSpanFull()
+                            ->visible(fn (Order $record): bool => filled($record->refund_note)),
+                    ])
+                    ->columns(3),
 
                 Section::make('ملاحظات')
                     ->schema([

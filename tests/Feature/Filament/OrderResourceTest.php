@@ -2,9 +2,12 @@
 
 namespace Tests\Feature\Filament;
 
+use App\Enums\DepositStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Filament\Resources\Orders\OrderResource;
+use App\Filament\Resources\Orders\Pages\ListOrders;
 use App\Filament\Resources\Orders\Pages\ViewOrder;
 use App\Models\Admin;
 use App\Models\Category;
@@ -85,6 +88,24 @@ class OrderResourceTest extends TestCase
             'quantity' => 1,
             'line_total' => 1850,
         ]);
+
+        return $order;
+    }
+
+    /** The same order, paid with a 20% deposit awaiting review. */
+    private function makeDepositOrder(OrderStatus $status = OrderStatus::Pending): Order
+    {
+        $order = $this->makeOrder($status);
+
+        $order->forceFill([
+            'payment_method' => PaymentMethod::Deposit,
+            'deposit_status' => DepositStatus::Submitted,
+            'deposit_percent' => 20,
+            'deposit_amount' => 378,          // 20% of 1890
+            'deposit_receipt_path' => 'deposits/receipt.jpg',
+            'deposit_reference' => 'TRX-5566',
+            'deposit_submitted_at' => now(),
+        ])->save();
 
         return $order;
     }
@@ -198,6 +219,241 @@ class OrderResourceTest extends TestCase
         // Both pages still load; the shipped one renders its fields disabled.
         $this->get("/admin/orders/{$shipped->id}/edit")->assertOk();
         $this->get("/admin/orders/{$pending->id}/edit")->assertOk();
+    }
+
+    public function test_a_deposit_order_shows_its_breakdown_and_review_buttons(): void
+    {
+        $order = $this->makeDepositOrder();
+
+        $this->get("/admin/orders/{$order->id}")
+            ->assertOk()
+            ->assertSee('العربون المقدّم')
+            ->assertSee('إيصال التحويل بانتظار المراجعة')
+            ->assertSee('TRX-5566')
+            ->assertSee('المتبقي للتحصيل');
+
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
+            ->assertActionExists('approveDeposit')
+            ->assertActionExists('rejectDeposit')
+            // Confirming is on the page but barred until the deposit is in.
+            ->assertActionDisabled('moveToconfirmed');
+    }
+
+    public function test_approving_the_deposit_part_pays_the_order_and_frees_confirmation(): void
+    {
+        $order = $this->makeDepositOrder();
+
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
+            ->callAction('approveDeposit');
+
+        $order->refresh();
+
+        $this->assertSame(DepositStatus::Approved, $order->deposit_status);
+        $this->assertSame(PaymentStatus::PartiallyPaid, $order->payment_status);
+        $this->assertSame($this->admin->id, $order->deposit_reviewed_by);
+        $this->assertNotNull($order->deposit_reviewed_at);
+        $this->assertSame(378.0, $order->paidAmount());
+        $this->assertSame(1512.0, $order->remainingAmount());
+
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
+            // Reviewed: nothing left to approve, and the order may move on.
+            ->assertActionDoesNotExist('approveDeposit')
+            ->assertActionEnabled('moveToconfirmed')
+            ->callAction('moveToconfirmed', data: ['note' => 'تم اعتماد العربون']);
+
+        $this->assertSame(OrderStatus::Confirmed, $order->fresh()->status);
+    }
+
+    public function test_rejecting_the_deposit_needs_a_reason_and_sends_it_back_to_the_customer(): void
+    {
+        $order = $this->makeDepositOrder();
+
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
+            ->callAction('rejectDeposit', data: ['reason' => null])
+            ->assertHasActionErrors(['reason' => 'required']);
+
+        $this->assertSame(DepositStatus::Submitted, $order->fresh()->deposit_status);
+
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
+            ->callAction('rejectDeposit', data: ['reason' => 'الإيصال غير واضح.']);
+
+        $order->refresh();
+
+        $this->assertSame(DepositStatus::Rejected, $order->deposit_status);
+        $this->assertSame('الإيصال غير واضح.', $order->deposit_rejection_reason);
+        $this->assertSame(PaymentStatus::Pending, $order->payment_status);
+        $this->assertSame($this->admin->id, $order->deposit_reviewed_by);
+        // Still the admin's to approve once a new receipt arrives.
+        $this->assertTrue($order->canReplaceDepositReceipt());
+    }
+
+    public function test_a_cash_order_offers_no_deposit_review(): void
+    {
+        $order = $this->makeOrder();
+
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
+            ->assertActionDoesNotExist('approveDeposit')
+            ->assertActionDoesNotExist('rejectDeposit')
+            ->assertActionEnabled('moveToconfirmed');
+
+        $this->get("/admin/orders/{$order->id}")->assertOk()->assertDontSee('العربون المقدّم');
+    }
+
+    public function test_the_orders_table_can_be_filtered_to_deposits_awaiting_review(): void
+    {
+        $deposit = $this->makeDepositOrder();
+        $cash = $this->makeOrder();
+
+        Livewire::test(ListOrders::class)
+            ->filterTable('awaiting_deposit_review')
+            ->assertCanSeeTableRecords([$deposit])
+            ->assertCanNotSeeTableRecords([$cash]);
+    }
+
+    public function test_approving_a_full_transfer_marks_the_order_paid(): void
+    {
+        $order = $this->makeDepositOrder();
+        // The customer chose to transfer the whole 1,890 rather than 20%.
+        $order->forceFill(['deposit_amount' => 1890, 'deposit_percent' => 100])->save();
+
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
+            ->callAction('approveDeposit');
+
+        $order->refresh();
+
+        $this->assertSame(PaymentStatus::Paid, $order->payment_status);
+        $this->assertSame(1890.0, $order->paidAmount());
+        $this->assertSame(0.0, $order->remainingAmount());
+        $this->assertStringContainsString('لا شيء للتحصيل عند الاستلام', $order->deliveryNote());
+
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
+            ->assertActionEnabled('moveToconfirmed');
+    }
+
+    public function test_cancelling_a_part_paid_order_leaves_a_refund_to_record(): void
+    {
+        $order = $this->makeDepositOrder();
+        $order->approveDeposit($this->admin);
+
+        // Nothing to refund while the order is still on its way.
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
+            ->assertActionDoesNotExist('recordRefund')
+            ->callAction('moveTocancelled', data: ['note' => 'العميل غيّر رأيه']);
+
+        $order->refresh();
+
+        $this->assertTrue($order->awaitingRefund());
+        $this->assertSame(378.0, $order->refundableAmount());
+        $this->assertSame(PaymentStatus::PartiallyPaid, $order->payment_status);
+
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
+            ->assertActionExists('recordRefund');
+
+        $this->get("/admin/orders/{$order->id}")
+            ->assertOk()
+            ->assertSee('استرداد المبلغ')
+            ->assertSee('المستحق للعميل');
+    }
+
+    public function test_recording_the_refund_settles_the_order(): void
+    {
+        $order = $this->makeDepositOrder();
+        $order->approveDeposit($this->admin);
+        $order->transitionTo(OrderStatus::Cancelled, 'العميل غيّر رأيه');
+
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
+            ->callAction('recordRefund', data: [
+                'amount' => 378,
+                'reference' => 'RFND-7788',
+                'note' => 'تحويل على نفس المحفظة.',
+            ]);
+
+        $order->refresh();
+
+        $this->assertSame(PaymentStatus::Refunded, $order->payment_status);
+        $this->assertSame('378.00', $order->refund_amount);
+        $this->assertSame('RFND-7788', $order->refund_reference);
+        $this->assertSame($this->admin->id, $order->refunded_by);
+        $this->assertNotNull($order->refunded_at);
+        $this->assertSame(0.0, $order->paidAmount());
+        $this->assertFalse($order->awaitingRefund());
+
+        // Settled: the button is gone and the figures read back on the page.
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
+            ->assertActionDoesNotExist('recordRefund');
+
+        $this->get("/admin/orders/{$order->id}")
+            ->assertOk()
+            ->assertSee('المبلغ المسترد')
+            ->assertSee('RFND-7788');
+    }
+
+    public function test_a_refund_cannot_exceed_what_the_customer_paid(): void
+    {
+        $order = $this->makeDepositOrder();
+        $order->approveDeposit($this->admin);
+        $order->transitionTo(OrderStatus::Cancelled, 'العميل غيّر رأيه');
+
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
+            ->callAction('recordRefund', data: ['amount' => 1000])
+            ->assertHasActionErrors(['amount' => 'max']);
+
+        $this->assertFalse($order->fresh()->isRefunded());
+    }
+
+    public function test_a_returned_order_owes_back_everything_that_was_collected(): void
+    {
+        // Cash on delivery, delivered and collected, then returned.
+        $order = $this->makeOrder(OrderStatus::Shipped);
+        $order->transitionTo(OrderStatus::Delivered);
+
+        $this->assertSame(PaymentStatus::Paid, $order->payment_status);
+
+        $order->transitionTo(OrderStatus::Returned, 'المقاس غير مناسب');
+
+        $this->assertTrue($order->awaitingRefund());
+        $this->assertSame(1890.0, $order->refundableAmount());
+
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
+            ->callAction('recordRefund', data: ['amount' => 1890]);
+
+        $this->assertSame(PaymentStatus::Refunded, $order->fresh()->payment_status);
+    }
+
+    public function test_a_cancelled_order_nobody_paid_for_offers_no_refund(): void
+    {
+        $order = $this->makeOrder();
+        $order->transitionTo(OrderStatus::Cancelled, 'مكرر');
+
+        $this->assertFalse($order->awaitingRefund());
+
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
+            ->assertActionDoesNotExist('recordRefund');
+
+        $this->get("/admin/orders/{$order->id}")->assertOk()->assertDontSee('المستحق للعميل');
+    }
+
+    public function test_the_orders_table_can_be_filtered_to_refunds_owed(): void
+    {
+        $owing = $this->makeDepositOrder();
+        $owing->approveDeposit($this->admin);
+        $owing->transitionTo(OrderStatus::Cancelled, 'العميل غيّر رأيه');
+
+        $settled = $this->makeDepositOrder();
+        $settled->approveDeposit($this->admin);
+        $settled->transitionTo(OrderStatus::Cancelled, 'العميل غيّر رأيه');
+        $settled->recordRefund($settled->refundableAmount(), admin: $this->admin);
+
+        $live = $this->makeDepositOrder();
+        $live->approveDeposit($this->admin);
+
+        Livewire::test(ListOrders::class)
+            ->filterTable('awaiting_refund')
+            ->assertCanSeeTableRecords([$owing])
+            ->assertCanNotSeeTableRecords([$settled, $live]);
+
+        // The scope behind the filter, reachable on its own.
+        $this->assertSame([$owing->id], Order::query()->owingRefund()->pluck('id')->all());
     }
 
     public function test_the_full_transition_map_is_one_way(): void

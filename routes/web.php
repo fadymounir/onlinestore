@@ -9,6 +9,7 @@ use App\Http\Controllers\Shop\CartController;
 use App\Http\Controllers\Shop\CatalogController;
 use App\Http\Controllers\Shop\CheckoutController;
 use App\Http\Controllers\Shop\HomeController;
+use App\Http\Controllers\Shop\PageController;
 use App\Http\Controllers\Shop\ProductController;
 use App\Http\Controllers\Shop\WishlistController;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,10 @@ Route::get('/', HomeController::class)->name('home');
 Route::get('/products', [CatalogController::class, 'index'])->name('catalog');
 Route::get('/category/{category:slug}', [CatalogController::class, 'category'])->name('category');
 Route::get('/product/{product:slug}', [ProductController::class, 'show'])->name('product');
+
+// Admin-authored content: about, privacy, terms. Kept under a /page prefix
+// rather than at the root so a new page can never shadow a real route.
+Route::get('/page/{page:slug}', [PageController::class, 'show'])->name('page');
 
 // Cart works for guests (session) and customers (database) alike.
 Route::prefix('cart')->name('cart.')->group(function () {
@@ -82,6 +87,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+        // Re-uploading a rejected deposit transfer receipt.
+        Route::post('/orders/{order}/deposit-receipt', [OrderController::class, 'uploadReceipt'])
+            ->name('orders.deposit-receipt');
 
         Route::get('/addresses', [AddressController::class, 'index'])->name('addresses.index');
         Route::get('/addresses/{address}/edit', [AddressController::class, 'edit'])->name('addresses.edit');
