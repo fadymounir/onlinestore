@@ -61,29 +61,55 @@ class AdminPermissions
     }
 
     /**
-     * Permission names as the role form holds them: the abilities ticked,
-     * keyed by resource. Names outside the vocabulary are dropped — a form
-     * cannot show a checkbox it has no heading for.
+     * The whole matrix set one way: every resource, every ability, on or off.
+     *
+     * This is the shape the role form binds its switches to —
+     * `abilities.<resource>.<ability>` is a plain boolean — so every switch
+     * has a value from the start rather than only once it is touched.
+     *
+     * @return array<string, array<string, bool>>
+     */
+    public static function matrix(bool $granted = false): array
+    {
+        $matrix = [];
+
+        foreach (array_keys(self::RESOURCES) as $resource) {
+            foreach (array_keys(self::ABILITIES) as $ability) {
+                $matrix[$resource][$ability] = $granted;
+            }
+        }
+
+        return $matrix;
+    }
+
+    /**
+     * Permission names as the role form holds them: the full matrix, with the
+     * granted ones switched on. Names outside the vocabulary are dropped — a
+     * form cannot show a switch it has no heading for.
      *
      * @param  iterable<int, string>  $names
-     * @return array<string, array<int, string>>
+     * @return array<string, array<string, bool>>
      */
     public static function group(iterable $names): array
     {
-        return Collection::make($names)
+        $matrix = self::matrix();
+
+        Collection::make($names)
             ->map(fn (string $name): array => explode('.', $name, 2))
             ->filter(fn (array $parts): bool => count($parts) === 2
                 && isset(self::RESOURCES[$parts[0]])
                 && isset(self::ABILITIES[$parts[1]]))
-            ->groupBy(fn (array $parts): string => $parts[0])
-            ->map(fn (Collection $rows): array => $rows->map(fn (array $parts): string => $parts[1])->values()->all())
-            ->all();
+            ->each(function (array $parts) use (&$matrix): void {
+                $matrix[$parts[0]][$parts[1]] = true;
+            });
+
+        return $matrix;
     }
 
     /**
-     * The reverse: grouped abilities back to permission names.
+     * The reverse: the switched-on cells back to permission names.
      *
-     * @param  array<string, array<int, string>|null>  $grouped
+     * @param  array<string, array<string, mixed>|null>  $grouped
      * @return array<int, string>
      */
     public static function flatten(array $grouped): array
@@ -95,8 +121,8 @@ class AdminPermissions
                 continue;
             }
 
-            foreach ($abilities ?? [] as $ability) {
-                if (isset(self::ABILITIES[$ability])) {
+            foreach ($abilities ?? [] as $ability => $granted) {
+                if ($granted && isset(self::ABILITIES[$ability])) {
                     $names[] = "{$resource}.{$ability}";
                 }
             }

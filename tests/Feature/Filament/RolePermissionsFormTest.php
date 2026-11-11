@@ -44,8 +44,43 @@ class RolePermissionsFormTest extends TestCase
             $page->assertSee($label);
         }
 
-        // The raw identifiers are not what an admin reads.
-        $page->assertDontSee('products.create');
+        // The raw identifiers still bind the switches — `abilities.products
+        // .create` is a wire:model path — but they are never reading matter.
+        $this->assertStringNotContainsString(
+            'products.create',
+            strip_tags($page->getContent()),
+        );
+
+        $page->assertSee('تحديد كل الصلاحيات')->assertSee('إلغاء تحديد الكل');
+    }
+
+    public function test_the_select_all_action_switches_every_permission_on(): void
+    {
+        $page = Livewire::test(CreateRole::class)
+            ->fillForm(['name' => 'مدير عام'])
+            ->call('mountAction', 'grantAll', [], ['schemaComponent' => 'form']);
+
+        $this->assertSame(AdminPermissions::matrix(granted: true), $page->get('data')['abilities']);
+
+        $page->call('create')->assertHasNoFormErrors();
+
+        $this->assertSame(
+            collect(AdminPermissions::names())->sort()->values()->all(),
+            Role::where('name', 'مدير عام')->sole()->permissions->pluck('name')->sort()->values()->all(),
+        );
+    }
+
+    public function test_the_clear_action_switches_every_permission_off(): void
+    {
+        $role = Role::where('name', 'مدير المتجر')->sole();
+        $this->assertNotEmpty($role->permissions);
+
+        Livewire::test(EditRole::class, ['record' => $role->getKey()])
+            ->call('mountAction', 'revokeAll', [], ['schemaComponent' => 'form'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertEmpty($role->fresh()->permissions);
     }
 
     public function test_creating_a_role_turns_the_ticks_into_permission_names(): void
@@ -54,8 +89,8 @@ class RolePermissionsFormTest extends TestCase
             ->fillForm([
                 'name' => 'مسؤول الشحن',
                 'abilities' => [
-                    'shipping' => ['view', 'update'],
-                    'orders' => ['view'],
+                    'shipping' => ['view' => true, 'update' => true],
+                    'orders' => ['view' => true],
                 ],
             ])
             ->call('create')
@@ -82,7 +117,11 @@ class RolePermissionsFormTest extends TestCase
 
         $this->assertSame(
             ['coupons' => ['view'], 'orders' => ['view'], 'products' => ['view']],
-            $abilities->filter()->sortKeys()->all(),
+            $abilities
+                ->map(fn (array $row): array => array_keys(array_filter($row)))
+                ->filter()
+                ->sortKeys()
+                ->all(),
         );
         // Every resource gets a box, ticked or not. The order they appear
         // in is the form's, not this array's.
@@ -93,9 +132,9 @@ class RolePermissionsFormTest extends TestCase
 
         $page->fillForm([
             'abilities' => [
-                'orders' => ['view', 'update'],
-                'coupons' => ['view'],
-                'products' => [],
+                'orders' => ['view' => true, 'update' => true],
+                'coupons' => ['view' => true],
+                'products' => ['view' => false],
             ],
         ])->call('save')->assertHasNoFormErrors();
 
