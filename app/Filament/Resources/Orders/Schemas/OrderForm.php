@@ -2,11 +2,14 @@
 
 namespace App\Filament\Resources\Orders\Schemas;
 
+use App\Enums\OrderStatus;
+use App\Models\Governorate;
 use App\Models\Order;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class OrderForm
@@ -31,7 +34,13 @@ class OrderForm
                     ]),
 
                 Section::make('تصحيح بيانات التوصيل')
-                    ->description('للتصحيح قبل الشحن فقط — بعد الشحن تُقفل هذه الحقول.')
+                    // An order taken while customer addresses were switched
+                    // off arrives here empty on purpose — the shop rings for
+                    // the address and fills it in. Say so, rather than
+                    // leaving required fields blank with no explanation.
+                    ->description(fn (?Order $record): string => $record?->lacksAddress()
+                        ? 'هذا الطلب وصل بدون عنوان. اكتب بيانات التوصيل هنا، ثم اضغط «احتساب الشحن من المحافظة» بالأعلى لتسعير الشحن.'
+                        : 'للتصحيح قبل الشحن فقط — بعد الشحن تُقفل هذه الحقول.')
                     ->schema([
                         TextInput::make('recipient_name')
                             ->label('المستلم')
@@ -56,8 +65,8 @@ class OrderForm
                             ->preload()
                             ->live()
                             // Keep the snapshot text in step with the FK.
-                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set): void {
-                                $set('governorate_name', \App\Models\Governorate::find($state)?->name);
+                            ->afterStateUpdated(function ($state, Set $set): void {
+                                $set('governorate_name', Governorate::find($state)?->name);
                             }),
 
                         TextInput::make('governorate_name')
@@ -86,7 +95,7 @@ class OrderForm
                     ])
                     ->columns(3)
                     ->disabled(fn (?Order $record): bool => $record?->status->isFinal()
-                        || $record?->status === \App\Enums\OrderStatus::Shipped),
+                        || $record?->status === OrderStatus::Shipped),
             ]);
     }
 }

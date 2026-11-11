@@ -12,6 +12,7 @@ use App\Http\Controllers\Shop\HomeController;
 use App\Http\Controllers\Shop\PageController;
 use App\Http\Controllers\Shop\ProductController;
 use App\Http\Controllers\Shop\WishlistController;
+use App\Http\Middleware\AddressesGate;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -91,10 +92,15 @@ Route::middleware('auth')->group(function () {
         Route::post('/orders/{order}/deposit-receipt', [OrderController::class, 'uploadReceipt'])
             ->name('orders.deposit-receipt');
 
-        Route::get('/addresses', [AddressController::class, 'index'])->name('addresses.index');
-        Route::get('/addresses/{address}/edit', [AddressController::class, 'edit'])->name('addresses.edit');
-        Route::post('/addresses', [AddressController::class, 'store'])->name('addresses.store');
-        Route::put('/addresses/{address}', [AddressController::class, 'update'])->name('addresses.update');
-        Route::delete('/addresses/{address}', [AddressController::class, 'destroy'])->name('addresses.destroy');
+        // The whole address book answers to the `customer_addresses_enabled`
+        // switch: with it off the shop takes delivery details itself, so
+        // there is nothing here for a customer to keep.
+        Route::middleware(AddressesGate::class)->group(function () {
+            Route::get('/addresses', [AddressController::class, 'index'])->name('addresses.index');
+            Route::get('/addresses/{address}/edit', [AddressController::class, 'edit'])->name('addresses.edit');
+            Route::post('/addresses', [AddressController::class, 'store'])->name('addresses.store');
+            Route::put('/addresses/{address}', [AddressController::class, 'update'])->name('addresses.update');
+            Route::delete('/addresses/{address}', [AddressController::class, 'destroy'])->name('addresses.destroy');
+        });
     });
 });

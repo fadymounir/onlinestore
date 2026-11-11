@@ -24,6 +24,18 @@ class Setting extends Model
         static::deleted(fn () => Cache::forget(self::CACHE_KEY));
     }
 
+    /**
+     * Drops the cached settings.
+     *
+     * Saving a setting does this on its own. A migration that writes through
+     * the DB facade does not go through the model, so it has to say so —
+     * otherwise the old values stay served until something else saves.
+     */
+    public static function forgetCache(): void
+    {
+        Cache::forget(self::CACHE_KEY);
+    }
+
     public static function get(string $key, mixed $default = null): mixed
     {
         $settings = Cache::rememberForever(
@@ -46,6 +58,36 @@ class Setting extends Model
         return filled($uploaded)
             ? Storage::disk('public')->url($uploaded)
             : asset('images/logo-192.png');
+    }
+
+    /**
+     * Whether a customer may file a new delivery address.
+     *
+     * Only adding is gated: an address already on file stays editable, so
+     * turning this off cannot strand a customer with a wrong address.
+     */
+    public static function customerAddressesEnabled(): bool
+    {
+        return (bool) static::get('customer_addresses_enabled', '1');
+    }
+
+    /** Whether a shop has uploaded a logo of its own. */
+    public static function hasCustomLogo(): bool
+    {
+        return filled(static::get('store_logo'));
+    }
+
+    /**
+     * The tab icon. An uploaded logo takes the job whole — one file at
+     * whatever size it was given — because the cut-to-size .ico and PNGs in
+     * public/ are built from the bundled badge by `npm run logo` and cannot
+     * be regenerated from an upload at request time.
+     */
+    public static function faviconUrl(): string
+    {
+        return static::hasCustomLogo()
+            ? static::logoUrl()
+            : asset('favicon.ico');
     }
 
     /**

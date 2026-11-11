@@ -6,10 +6,10 @@
 
     {{-- The information column only exists when an admin has marked a page for
          the footer, so the track count follows it rather than leaving a gap. --}}
-    <div class="mx-auto grid max-w-7xl gap-10 px-4 py-14 text-center sm:grid-cols-2 sm:text-start {{ $footerPages->isNotEmpty() ? 'lg:grid-cols-5' : 'lg:grid-cols-4' }}">
-        <div class="sm:col-span-2 lg:col-span-1">
+    <div class="mx-auto grid max-w-7xl grid-cols-2 gap-x-6 gap-y-10 px-4 py-14 text-center sm:gap-10 sm:text-start {{ $footerPages->isNotEmpty() ? 'lg:grid-cols-5' : 'lg:grid-cols-4' }}">
+        <div class="col-span-2 lg:col-span-1">
             <div class="mb-4 flex items-center justify-center gap-2.5 sm:justify-start">
-                <img src="{{ asset('images/logo-192.png') }}" alt="" width="192" height="192" class="size-16 rounded-full">
+                <img src="{{ $storeLogo }}" alt="" width="192" height="192" class="size-16 rounded-full object-cover">
                 <h2 class="text-lg font-extrabold tracking-tight text-white">{{ $storeName }}</h2>
             </div>
             {{-- mx-auto so the capped width centres under the wordmark
@@ -31,7 +31,9 @@
             <ul class="space-y-2.5 text-sm">
                 @auth
                     <li><a href="{{ route('account.orders.index') }}" class="transition hover:text-brand-300">طلباتي</a></li>
-                    <li><a href="{{ route('account.addresses.index') }}" class="transition hover:text-brand-300">عناويني</a></li>
+                    @if ($addressesEnabled)
+                        <li><a href="{{ route('account.addresses.index') }}" class="transition hover:text-brand-300">عناويني</a></li>
+                    @endif
                     <li><a href="{{ route('wishlist') }}" class="transition hover:text-brand-300">المفضّلة</a></li>
                 @else
                     <li><a href="{{ route('login') }}" class="transition hover:text-brand-300">تسجيل الدخول</a></li>

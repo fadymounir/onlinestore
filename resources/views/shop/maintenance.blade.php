@@ -9,7 +9,7 @@
 </head>
 <body class="flex min-h-screen items-center justify-center bg-paper px-4 font-sans text-stone-800">
     <div class="max-w-md text-center">
-        <img src="{{ asset('images/logo.png') }}" alt="" width="512" height="512"
+        <img src="{{ $storeLogo }}" alt="" width="512" height="512"
              class="mx-auto mb-6 size-40 rounded-full shadow-soft">
         <h1 class="text-2xl font-extrabold tracking-tight text-stone-900 sm:text-3xl">{{ $storeName }}</h1>
         <p class="mt-4 text-lg font-semibold">المتجر مغلق مؤقتاً للصيانة</p>

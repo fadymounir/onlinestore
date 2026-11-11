@@ -21,12 +21,7 @@
     <title>@yield('title', $storeName) — {{ $storeName }}</title>
     <meta name="description" content="@yield('description', $storeTagline)">
     <meta name="theme-color" content="#1c1917">
-    {{-- The .ico carries 16/32/48 for the tab, the 192 is what Android and
-         the install prompt reach for. All of it is cut from the badge in
-         resources/images — see `npm run logo`. --}}
-    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
-    <link rel="icon" type="image/png" href="{{ asset('images/logo-192.png') }}" sizes="192x192">
-    <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
+    @include('layouts.partials.favicons')
     <meta property="og:image" content="{{ asset('images/logo.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     {{-- The loader below is hidden until this line runs, so a visitor without
@@ -48,7 +43,7 @@
      only ever appears on a load slow enough to be worth covering. --}}
 <div class="app-preloader" aria-hidden="true">
     <div class="app-preloader__inner">
-        <img src="{{ asset('images/logo-192.png') }}" alt="" width="192" height="192" class="app-preloader__logo">
+        <img src="{{ $storeLogo }}" alt="" width="192" height="192" class="app-preloader__logo">
         <span class="app-preloader__name">{{ $storeName }}</span>
         <span class="app-preloader__track"><span class="app-preloader__bar"></span></span>
     </div>

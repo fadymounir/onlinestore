@@ -4,11 +4,12 @@ namespace App\Filament\Pages;
 
 use App\Models\Setting;
 use BackedEnum;
+use Database\Seeders\SettingSeeder;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -54,6 +55,7 @@ class ManageSettings extends Page
         'contact' => ['label' => 'بيانات التواصل', 'icon' => 'heroicon-o-phone'],
         'social' => ['label' => 'السوشيال ميديا', 'icon' => 'heroicon-o-share'],
         'checkout' => ['label' => 'الشراء والدفع', 'icon' => 'heroicon-o-shopping-cart'],
+        'payments' => ['label' => 'طرق الدفع', 'icon' => 'heroicon-o-credit-card'],
         'inventory' => ['label' => 'المخزون', 'icon' => 'heroicon-o-archive-box'],
         'reviews' => ['label' => 'التقييمات', 'icon' => 'heroicon-o-star'],
     ];
@@ -81,7 +83,21 @@ class ManageSettings extends Page
                         Action::make('reload')
                             ->label('استعادة القيم المحفوظة')
                             ->color('gray')
-                            ->action(fn () => $this->mount()),
+                            // mount() puts the saved values back into the
+                            // component's state, but some controls do not
+                            // read that state again: the logo's upload box
+                            // is FilePond, which keeps its own copy in
+                            // Alpine and ignores a server-side refill, so a
+                            // picked-but-unsaved file survived the restore.
+                            // Reloading the page is the only way to show
+                            // what is actually saved, in every field at
+                            // once. The URL carries the open tab, so the
+                            // page comes back where it was.
+                            ->action(function (): void {
+                                $this->mount();
+
+                                $this->js('window.location.reload()');
+                            }),
                     ])->sticky(),
                 ]),
         ]);
@@ -89,7 +105,17 @@ class ManageSettings extends Page
 
     public function form(Schema $schema): Schema
     {
-        $settings = Setting::query()->orderBy('id')->get()->groupBy('group');
+        // Ordered by the seeder's declaration rather than by id — see
+        // SettingSeeder::declaredOrder(). A row it does not know about (a
+        // future seeder, a hand-added key) keeps its place at the end.
+        $declared = array_flip(SettingSeeder::declaredOrder());
+
+        $settings = Setting::query()
+            ->orderBy('id')
+            ->get()
+            ->sortBy(fn (Setting $setting): int => $declared[$setting->key] ?? PHP_INT_MAX)
+            ->values()
+            ->groupBy('group');
 
         $tabs = [];
 

@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\EditProfile;
 use App\Filament\Pages\Dashboard;
+use App\Models\Setting;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -34,9 +35,11 @@ class AdminPanelProvider extends PanelProvider
             // isSimple: false renders the profile inside the panel layout.
             ->profile(EditProfile::class, isSimple: false)
             ->brandName(config('app.name'))
-            ->brandLogo(asset('images/logo-192.png'))
+            // A closure, not a value: the panel is built on every request,
+            // console commands included, and the logo is a database read.
+            ->brandLogo(fn (): string => Setting::logoUrl())
             ->brandLogoHeight('3.5rem')
-            ->favicon(asset('favicon.ico'))
+            ->favicon(fn (): string => Setting::faviconUrl())
             // Inter (Filament's default) has poor Arabic coverage; Cairo is a
             // proper Arabic face and matches the storefront's --font-sans.
             ->font('Cairo')

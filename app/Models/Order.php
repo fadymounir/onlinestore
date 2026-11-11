@@ -200,6 +200,61 @@ class Order extends Model
             && $this->depositAmount() >= round((float) $this->grand_total, 2);
     }
 
+    /**
+     * Whether this order was placed without a delivery address.
+     *
+     * Orders taken while `customer_addresses_enabled` is off carry the
+     * customer's name and phone but nowhere to send the parcel — the shop
+     * rings for that and fills it in here.
+     */
+    public function lacksAddress(): bool
+    {
+        return blank($this->street) || blank($this->governorate_name);
+    }
+
+    /**
+     * What the courier would cost for the governorate now on this order,
+     * priced off the order's own figures rather than today's cart. Null when
+     * no governorate is set, or when it has no shipping zone to price from.
+     */
+    public function shippingQuote(): ?float
+    {
+        $zone = $this->governorate?->shippingZone;
+
+        if (! $zone) {
+            return null;
+        }
+
+        return $zone->costFor(round((float) $this->subtotal - (float) $this->discount_total, 2));
+    }
+
+    /**
+     * Prices the shipping on an order that was placed without one, and moves
+     * the grand total with it.
+     *
+     * Only the shipping line moves: the subtotal and the discount were agreed
+     * when the order was placed and are not rewritten here. Returns false when
+     * there is nothing to price from.
+     */
+    public function repriceShipping(): bool
+    {
+        $shipping = $this->shippingQuote();
+
+        if ($shipping === null) {
+            return false;
+        }
+
+        $this->forceFill([
+            'shipping_total' => $shipping,
+            'grand_total' => round(
+                (float) $this->subtotal - (float) $this->discount_total + $shipping,
+                2,
+            ),
+        ])->save();
+
+        return true;
+    }
+
     /** Cancelled or returned: nothing further will ever be collected on it. */
     public function isVoided(): bool
     {

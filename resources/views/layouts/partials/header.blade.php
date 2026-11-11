@@ -15,8 +15,8 @@
                  into a brown smudge. A phone is where it was hardest to read —
                  it is the one screen with no search bar beside it to borrow
                  height from — so it gets 72px there and 80px from md up. --}}
-            <img src="{{ asset('images/logo-192.png') }}" alt="{{ $storeName }}" width="192" height="192"
-                 class="size-18 rounded-full md:size-20">
+            <img src="{{ $storeLogo }}" alt="{{ $storeName }}" width="192" height="192"
+                 class="size-18 rounded-full object-cover md:size-20">
             {{-- The badge carries its own wordmark, so the name is a companion, not a repeat. --}}
             <span class="max-w-[38vw] truncate text-lg font-extrabold tracking-tight text-stone-900">{{ $storeName }}</span>
         </a>
@@ -68,7 +68,9 @@
                                 أهلاً، <span class="font-bold text-stone-800">{{ auth()->user()->name }}</span>
                             </p>
                             <a href="{{ route('account.orders.index') }}" class="block rounded-xl px-3 py-2 text-sm transition hover:bg-brand-50 hover:text-brand-800">طلباتي</a>
-                            <a href="{{ route('account.addresses.index') }}" class="block rounded-xl px-3 py-2 text-sm transition hover:bg-brand-50 hover:text-brand-800">عناويني</a>
+                            @if ($addressesEnabled)
+                                <a href="{{ route('account.addresses.index') }}" class="block rounded-xl px-3 py-2 text-sm transition hover:bg-brand-50 hover:text-brand-800">عناويني</a>
+                            @endif
                             <a href="{{ route('wishlist') }}" class="block rounded-xl px-3 py-2 text-sm transition hover:bg-brand-50 hover:text-brand-800">المفضّلة</a>
                             <form action="{{ route('logout') }}" method="POST">
                                 @csrf

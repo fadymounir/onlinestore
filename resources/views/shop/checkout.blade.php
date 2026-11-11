@@ -14,6 +14,18 @@
 
         <div class="space-y-6">
             {{-- address --}}
+            @if (! $collectsAddress)
+                {{-- Addresses are switched off in the panel, so the step is
+                     gone rather than shown empty. The order still carries the
+                     account's name and phone, which is what the shop rings. --}}
+                <section class="rounded-3xl bg-white p-6 shadow-soft">
+                    <h2 class="mb-3 font-bold text-stone-900">التوصيل</h2>
+                    <p class="rounded-xl bg-brand-50 px-4 py-3 text-sm leading-relaxed text-brand-900">
+                        سنتواصل معك على رقم حسابك لتأكيد الطلب والاتفاق على عنوان ووقت التوصيل،
+                        وتُحسب تكلفة الشحن وقتها.
+                    </p>
+                </section>
+            @else
             <section class="rounded-3xl bg-white p-6 shadow-soft">
                 <div class="mb-4 flex items-center justify-between gap-3">
                     <h2 class="font-bold text-stone-900">عنوان التوصيل</h2>
@@ -63,6 +75,7 @@
                     </p>
                 @endif
             </section>
+            @endif
 
             {{-- payment --}}
             <section class="rounded-3xl bg-white p-6 shadow-soft">
@@ -191,7 +204,7 @@
 
             {{-- note --}}
             <section class="rounded-3xl bg-white p-6 shadow-soft">
-                <h2 class="mb-3 font-bold text-stone-900">ملاحظة للمندوب</h2>
+                <h2 class="mb-3 font-bold text-stone-900">ملاحظات</h2>
                 <textarea name="note" rows="3" maxlength="1000" placeholder="مثال: اتصل قبل التوصيل بنصف ساعة."
                           class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">{{ old('note') }}</textarea>
             </section>
@@ -240,7 +253,12 @@
                         @endif
                     </dt>
                     <dd class="font-medium">
-                        @if ($totals['shipping'] <= 0)
+                        @if (! $collectsAddress)
+                            {{-- Zero here means "no address to price it from",
+                                 not "free" — saying مجاني would be a promise
+                                 the shop has not made. --}}
+                            <span class="text-stone-500">يُحسب عند التأكيد</span>
+                        @elseif ($totals['shipping'] <= 0)
                             <span class="text-emerald-700">مجاني</span>
                         @else
                             {{ number_format($totals['shipping'], 2) }} ج.م

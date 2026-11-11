@@ -25,7 +25,22 @@ class CheckoutService
     /** Where transfer receipts are filed on Order::RECEIPT_DISK. */
     public const RECEIPT_DIRECTORY = 'deposits';
 
+    /** What a customer reads while `ordering_paused` is on. */
+    public const PAUSED_MESSAGE = 'استقبال الطلبات متوقف مؤقتاً. يمكنك التصفح وإضافة المنتجات إلى السلة،'
+        .' وستظل محفوظة حتى نفتح الطلبات من جديد.';
+
     public function __construct(private readonly CartService $cart) {}
+
+    /**
+     * The `ordering_paused` setting: the storefront stays browsable and the
+     * cart keeps working, but nothing can be checked out. Asked here rather
+     * than in a middleware so the cart page, the checkout page and the submit
+     * all read the same switch.
+     */
+    public function ordersPaused(): bool
+    {
+        return (bool) Setting::get('ordering_paused', '0');
+    }
 
     /**
      * @return array{subtotal: float, discount: float, shipping: float, total: float,
@@ -171,9 +186,27 @@ class CheckoutService
      * the share of the order that comes to, and the transfer receipt — then
      * waits on an admin to accept that receipt.
      */
+    /**
+     * The delivery details written onto the order.
+     *
+     * With no address — `customer_addresses_enabled` is off, so checkout never
+     * asked — the order still has to say who to reach, or the shop cannot ring
+     * for the address it is about to need. The account supplies that much; the
+     * place itself stays blank.
+     *
+     * @return array<string, mixed>
+     */
+    private function addressSnapshot(?Address $address, User $user): array
+    {
+        return $address?->toOrderSnapshot() ?? [
+            'recipient_name' => $user->name,
+            'phone' => $user->phone,
+        ];
+    }
+
     public function place(
         User $user,
-        Address $address,
+        ?Address $address,
         ?string $note = null,
         PaymentMethod $method = PaymentMethod::CashOnDelivery,
         ?string $receiptPath = null,
@@ -208,7 +241,7 @@ class CheckoutService
             $coupon = $this->resolveCoupon($user, (float) $subtotal);
             $discount = $coupon ? $coupon->discountFor((float) $subtotal) : 0.0;
 
-            $zone = $address->governorate?->shippingZone;
+            $zone = $address?->governorate?->shippingZone;
             $shipping = $zone ? $zone->costFor((float) $subtotal - $discount) : 0.0;
 
             $grandTotal = round((float) $subtotal - $discount + $shipping, 2);
@@ -247,7 +280,7 @@ class CheckoutService
                 'customer_note' => $note,
                 'placed_at' => now(),
                 'stock_deducted' => true,
-                ...$address->toOrderSnapshot(),
+                ...$this->addressSnapshot($address, $user),
             ]);
 
             foreach ($lines as $line) {

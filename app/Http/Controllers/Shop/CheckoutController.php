@@ -26,6 +26,10 @@ class CheckoutController extends Controller
 
     public function index(): View|RedirectResponse
     {
+        if ($this->checkout->ordersPaused()) {
+            return redirect()->route('cart.index')->with('error', CheckoutService::PAUSED_MESSAGE);
+        }
+
         if ($this->cart->isEmpty()) {
             return redirect()->route('cart.index')->with('error', 'سلتك فارغة.');
         }
@@ -35,12 +39,21 @@ class CheckoutController extends Controller
         }
 
         $user = Auth::user();
-        $addresses = $user->addresses()->with('governorate.shippingZone', 'city')->get();
+
+        // With addresses switched off the step disappears rather than being
+        // shown empty: the shop collects the delivery details itself.
+        $collectsAddress = Setting::customerAddressesEnabled();
+
+        $addresses = $collectsAddress
+            ? $user->addresses()->with('governorate.shippingZone', 'city')->get()
+            : collect();
+
         $address = $addresses->firstWhere('is_default', true) ?? $addresses->first();
 
         $methods = PaymentMethod::enabled();
 
         return view('shop.checkout', [
+            'collectsAddress' => $collectsAddress,
             'lines' => $this->cart->items(),
             'addresses' => $addresses,
             'address' => $address,
@@ -54,8 +67,16 @@ class CheckoutController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // Checked before validation: a paused shop should say so plainly
+        // rather than first nitpick the form it is about to refuse anyway.
+        if ($this->checkout->ordersPaused()) {
+            return redirect()->route('cart.index')->with('error', CheckoutService::PAUSED_MESSAGE);
+        }
+
+        $collectsAddress = Setting::customerAddressesEnabled();
+
         $data = $request->validate([
-            'address_id' => ['required', 'integer'],
+            'address_id' => [Rule::requiredIf($collectsAddress), 'nullable', 'integer'],
             'note' => ['nullable', 'string', 'max:1000'],
             'payment_method' => ['nullable', Rule::enum(PaymentMethod::class)],
             'deposit_receipt' => [
@@ -98,14 +119,18 @@ class CheckoutController extends Controller
         $user = Auth::user();
 
         /** @var Address|null $address */
-        $address = $user->addresses()->with('governorate.shippingZone', 'city')->find($data['address_id']);
+        $address = null;
 
-        if (! $address) {
-            return back()->with('error', 'عنوان التوصيل غير صحيح.');
-        }
+        if ($collectsAddress) {
+            $address = $user->addresses()->with('governorate.shippingZone', 'city')->find($data['address_id']);
 
-        if (! $address->governorate?->shippingZone) {
-            return back()->with('error', 'لا يوجد شحن متاح لهذه المحافظة حالياً. اختر عنواناً آخر.');
+            if (! $address) {
+                return back()->with('error', 'عنوان التوصيل غير صحيح.');
+            }
+
+            if (! $address->governorate?->shippingZone) {
+                return back()->with('error', 'لا يوجد شحن متاح لهذه المحافظة حالياً. اختر عنواناً آخر.');
+            }
         }
 
         $transferAmount = null;

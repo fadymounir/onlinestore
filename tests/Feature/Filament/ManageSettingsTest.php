@@ -2,12 +2,15 @@
 
 namespace Tests\Feature\Filament;
 
+use App\Enums\PaymentMethod;
 use App\Filament\Pages\ManageSettings;
 use App\Models\Admin;
 use App\Models\Setting;
 use Database\Seeders\AdminSeeder;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -34,9 +37,13 @@ class ManageSettingsTest extends TestCase
             ->assertSee('بيانات التواصل')
             ->assertSee('السوشيال ميديا')
             ->assertSee('الشراء والدفع')
+            ->assertSee('طرق الدفع')
             ->assertSee('المخزون')
             ->assertSee('التقييمات')
-            ->assertSee('اسم المتجر');
+            ->assertSee('اسم المتجر')
+            // The orders switch sits under عام beside وضع الصيانة: the two
+            // ways to close the shop belong side by side.
+            ->assertSee('إيقاف الطلبات مؤقتاً (التصفح والسلة يظلان يعملان)');
     }
 
     public function test_it_loads_the_current_values(): void
@@ -130,14 +137,165 @@ class ManageSettingsTest extends TestCase
             ->fillForm(['maintenance_mode' => true])
             ->call('save');
 
-        // Staff keep working (the admin guard is still authenticated here).
+        // The panel keeps working — that is the whole point of the switch
+        // being reachable while the shop is shut.
         $this->get('/admin')->assertOk();
-        $this->get('/')->assertOk();
 
-        // A plain visitor gets the closed-shop page.
+        // The shop closes for everyone, the signed-in admin included, so a
+        // staff member testing the switch sees what a customer sees.
+        $this->get('/')->assertStatus(503)->assertSee('المتجر مغلق مؤقتاً للصيانة');
+
         auth('admin')->logout();
         $this->get('/')->assertStatus(503)->assertSee('المتجر مغلق مؤقتاً للصيانة');
         $this->get('/products')->assertStatus(503);
+
+        // Signing back in has to keep working. Filament drives every panel
+        // interaction — the login form included — through Livewire's update
+        // endpoint, and that one *does* ride the `web` group: closing it
+        // would 503 the login submit and lock staff out of the very switch
+        // that lifts maintenance mode.
+        $this->get('/admin/login')->assertOk();
+
+        $this->assertNotSame(
+            503,
+            $this->withHeader('X-Livewire', '1')
+                ->post(Livewire::getUpdateUri())
+                ->getStatusCode(),
+        );
+    }
+
+    public function test_an_uploaded_logo_replaces_the_built_in_badge(): void
+    {
+        // Empty is not broken: the generated badge stands in until a shop
+        // uploads its own, so the storefront always has a mark.
+        $this->assertNull(Setting::get('store_logo'));
+        $this->assertSame(asset('images/logo-192.png'), Setting::logoUrl());
+
+        Storage::fake('public');
+
+        Livewire::test(ManageSettings::class)
+            ->fillForm(['store_logo' => UploadedFile::fake()->image('brand.png')])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $stored = Setting::get('store_logo');
+        $this->assertNotNull($stored);
+        Storage::disk('public')->assertExists($stored);
+
+        // The uploaded file is what the header, the footer, the tab icon and
+        // the panel brand all render — the setting was dead wiring before.
+        $url = Storage::disk('public')->url($stored);
+        $this->assertSame($url, Setting::logoUrl());
+        $this->assertSame($url, Setting::faviconUrl());
+
+        auth('admin')->logout();
+        $this->get('/')
+            ->assertOk()
+            ->assertSee($url)
+            ->assertSee('<link rel="icon" href="'.$url.'">', false)
+            // The built-in set stands down rather than competing with it.
+            ->assertDontSee(asset('favicon.ico'));
+
+        $this->actingAs(Admin::where('email', 'admin@admin.com')->sole(), 'admin');
+        $this->get('/admin')->assertOk()->assertSee($url);
+    }
+
+    public function test_the_built_in_icons_are_used_until_a_logo_is_uploaded(): void
+    {
+        $this->assertSame(asset('favicon.ico'), Setting::faviconUrl());
+
+        auth('admin')->logout();
+        $this->get('/')
+            ->assertOk()
+            ->assertSee(asset('favicon.ico'))
+            ->assertSee(asset('images/logo-192.png'))
+            ->assertSee(asset('images/apple-touch-icon.png'));
+    }
+
+    public function test_the_payment_methods_have_a_tab_of_their_own(): void
+    {
+        // Switching a method off is the point of the tab, so the toggles and
+        // the deposit's own settings have to be the things on it.
+        $this->get('/admin/manage-settings')
+            ->assertOk()
+            ->assertSee('طرق الدفع')
+            ->assertSee('تفعيل الدفع عند الاستلام')
+            ->assertSee('تفعيل الدفع بعربون (تحويل بنكي)')
+            ->assertSee('الحد الأدنى للعربون % من إجمالي الطلب');
+
+        $this->assertSame(
+            ['cod_enabled', 'deposit_enabled', 'deposit_percent', 'deposit_instructions'],
+            $this->keysIn('payments'),
+        );
+
+        // Currency, the order minimum and the address switch stay where
+        // they were — they are about the order, not about how it is paid.
+        $this->assertSame(
+            ['currency_code', 'currency_symbol', 'min_order_total', 'customer_addresses_enabled'],
+            $this->keysIn('checkout'),
+        );
+    }
+
+    /**
+     * A group's keys in the order the page lays them out. Migrations insert
+     * settings rows of their own and claim the low ids, so `id` is not it.
+     *
+     * @return array<int, string>
+     */
+    private function keysIn(string $group): array
+    {
+        $declared = array_flip(SettingSeeder::declaredOrder());
+
+        return Setting::where('group', $group)
+            ->pluck('key')
+            ->sortBy(fn (string $key): int => $declared[$key] ?? PHP_INT_MAX)
+            ->values()
+            ->all();
+    }
+
+    public function test_the_tabs_follow_the_seeders_order_not_the_row_ids(): void
+    {
+        // The deposit rows are created by a migration, so on a fresh install
+        // they hold ids 1-3 — ahead of the store name. The page must not
+        // read that as "show the deposit fields first".
+        $this->assertLessThan(
+            Setting::where('key', 'store_name')->value('id'),
+            Setting::where('key', 'deposit_enabled')->value('id'),
+        );
+
+        $this->assertSame(
+            ['store_name', 'store_tagline', 'store_logo', 'maintenance_mode', 'ordering_paused'],
+            $this->keysIn('general'),
+        );
+    }
+
+    public function test_turning_a_method_off_takes_it_off_the_checkout_page(): void
+    {
+        Livewire::test(ManageSettings::class)
+            ->fillForm(['deposit_enabled' => false])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('0', Setting::get('deposit_enabled'));
+        $this->assertFalse(PaymentMethod::Deposit->isEnabled());
+        $this->assertSame([PaymentMethod::CashOnDelivery], PaymentMethod::enabled());
+    }
+
+    public function test_restoring_saved_values_discards_an_unsaved_draft(): void
+    {
+        $page = Livewire::test(ManageSettings::class)
+            ->fillForm(['store_name' => 'مسودة لم تُحفظ'], 'form');
+
+        $this->assertSame('مسودة لم تُحفظ', $page->get('data')['store_name']);
+
+        // Called the way the rendered button calls it — the action lives in
+        // the content schema's footer, not among the page's own actions.
+        $page->call('mountAction', 'reload', [], ['schemaComponent' => 'content']);
+
+        // The draft is gone from the component's state, and nothing reached
+        // the database on the way.
+        $this->assertSame('Simple', $page->get('data')['store_name']);
+        $this->assertSame('Simple', Setting::get('store_name'));
     }
 
     public function test_a_setting_in_an_unknown_group_still_gets_a_tab(): void

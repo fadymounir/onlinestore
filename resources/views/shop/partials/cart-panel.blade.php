@@ -115,9 +115,18 @@
             @endforeach
         </div>
 
-        {{-- summary --}}
-        <aside class="space-y-4">
-            <div class="rounded-3xl bg-white p-6 shadow-soft">
+        {{--
+            Summary and coupon, in that order on desktop.
+
+            On a phone the order flips. The coupon box last would put the one
+            field a customer still has to fill below the total, the checkout
+            button and the fixed bar that covers the foot of the viewport —
+            so a discount gets offered after the decision to pay, with its
+            input under the bar. Ordered rather than moved so the desktop
+            column keeps reading top-down: what you owe, then what reduces it.
+        --}}
+        <aside class="flex flex-col gap-4">
+            <div class="order-2 rounded-3xl bg-white p-6 shadow-soft lg:order-1">
                 <h2 class="mb-4 font-bold text-stone-900">ملخص الطلب</h2>
 
                 <dl class="space-y-3 text-sm">
@@ -144,27 +153,39 @@
                     </div>
                 </dl>
 
-                @auth
-                    {{-- Deliberately a real navigation: placing an order is not a background task. --}}
+                @if ($orderingPaused)
+                    {{-- Orders paused: the cart stays editable, the way out does not. --}}
+                    <p class="mt-5 rounded-xl bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-amber-900">
+                        {{ $orderingPausedMessage }}
+                    </p>
+                @elseif (auth()->check())
+                    {{-- Deliberately a real navigation: placing an order is not a background task.
+
+                         hidden below md: the fixed bar at the foot of the phone
+                         viewport carries this same call, and the two were
+                         showing at once. `md:hidden` there, `hidden md:block`
+                         here — one control at every width. --}}
                     <a href="{{ route('checkout') }}"
-                       class="mt-5 block rounded-xl bg-stone-900 px-6 py-3 text-center font-bold text-white transition hover:bg-stone-800">
+                       class="mt-5 hidden rounded-xl bg-stone-900 px-6 py-3 text-center font-bold text-white transition hover:bg-stone-800 md:block">
                         إتمام الطلب
                     </a>
                 @else
                     <a href="{{ route('login') }}"
-                       class="mt-5 block rounded-xl bg-stone-900 px-6 py-3 text-center font-bold text-white transition hover:bg-stone-800">
+                       class="mt-5 hidden rounded-xl bg-stone-900 px-6 py-3 text-center font-bold text-white transition hover:bg-stone-800 md:block">
                         سجّل الدخول لإتمام الطلب
                     </a>
-                    <p class="mt-2 text-center text-xs text-stone-500">سلتك محفوظة وستنتقل معك بعد الدخول.</p>
-                @endauth
+                    {{-- Travels with the call it explains. --}}
+                    <p class="mt-2 hidden text-center text-xs text-stone-500 md:block">سلتك محفوظة وستنتقل معك بعد الدخول.</p>
+                @endif
 
-                <a href="{{ route('catalog') }}" class="mt-3 block text-center text-sm text-stone-600 hover:text-brand-700">
+                <a href="{{ route('catalog') }}"
+                   class="mt-5 block text-center text-sm text-stone-600 hover:text-brand-700 md:mt-3">
                     متابعة التسوّق
                 </a>
             </div>
 
             {{-- coupon --}}
-            <div class="rounded-3xl bg-white p-6 shadow-soft">
+            <div class="order-1 rounded-3xl bg-white p-6 shadow-soft lg:order-2">
                 <h2 class="mb-3 text-sm font-bold text-stone-900">كوبون الخصم</h2>
 
                 @if ($coupon)
@@ -179,9 +200,12 @@
                 @else
                     <form action="{{ route('cart.coupon.apply') }}" method="POST" data-ajax class="flex gap-2">
                         @csrf
+                        {{-- min-w-0 beats the automatic minimum size of a text
+                             input (about 20 characters), which would otherwise
+                             push the button out of the card on a narrow phone. --}}
                         <input type="text" name="code" value="{{ $couponCode }}" placeholder="أدخل الكود" dir="ltr"
-                               class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
-                        <button type="submit" class="rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-stone-800">
+                               class="min-w-0 flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10">
+                        <button type="submit" class="shrink-0 rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-stone-800">
                             تطبيق
                         </button>
                     </form>
@@ -213,7 +237,11 @@
             </p>
         </div>
 
-        @auth
+        @if ($orderingPaused)
+            <p class="flex-1 rounded-xl bg-amber-50 px-4 py-2.5 text-center text-xs font-semibold leading-snug text-amber-900">
+                استقبال الطلبات متوقف مؤقتاً
+            </p>
+        @elseif (auth()->check())
             <a href="{{ route('checkout') }}"
                class="flex-1 rounded-xl bg-stone-900 px-5 py-3.5 text-center font-bold text-white transition hover:bg-stone-800">
                 إتمام الطلب
@@ -223,6 +251,6 @@
                class="flex-1 rounded-xl bg-stone-900 px-5 py-3.5 text-center text-sm font-bold text-white transition hover:bg-stone-800">
                 سجّل الدخول لإتمام الطلب
             </a>
-        @endauth
+        @endif
     </div>
 @endif

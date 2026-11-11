@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Page;
 use App\Models\Setting;
 use App\Services\CartService;
+use App\Services\CheckoutService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
@@ -38,10 +39,18 @@ class ShareStorefrontData
             // linked into a tree in memory, so depth costs nothing extra.
             'navCategories' => Category::tree(onlyActive: true),
             'cartCount' => app(CartService::class)->count(),
+            // Orders paused: the cart's checkout buttons stand down, but
+            // everything else on the storefront carries on as normal.
+            'orderingPaused' => app(CheckoutService::class)->ordersPaused(),
+            // Addresses switched off: the account menu and the footer stop
+            // offering a page that now redirects away.
+            'addressesEnabled' => Setting::customerAddressesEnabled(),
+            'orderingPausedMessage' => CheckoutService::PAUSED_MESSAGE,
             // Admin-authored pages the panel marked for the footer.
             'footerPages' => Page::inFooter()->get(['id', 'title', 'menu_title', 'slug']),
             'storeName' => Setting::get('store_name', config('app.name')),
             'storeTagline' => Setting::get('store_tagline', ''),
+            'storeLogo' => Setting::logoUrl(),
             'storePhone' => Setting::get('store_phone'),
             'storeWhatsapp' => $whatsapp,
             'storeWhatsappUrl' => $this->whatsappUrl($whatsapp),
