@@ -12,10 +12,11 @@
         <a href="{{ route('home') }}" class="flex shrink-0 items-center gap-2.5">
             {{-- Sized to be read, not just noticed: the badge carries a wordmark
                  and a ring of type, and below about 56px all of that collapses
-                 into a brown smudge. 64px from md up is 192 at 3x exactly, which
-                 is why the 192 is the right file here rather than the 512. --}}
+                 into a brown smudge. A phone is where it was hardest to read —
+                 it is the one screen with no search bar beside it to borrow
+                 height from — so it gets 72px there and 80px from md up. --}}
             <img src="{{ asset('images/logo-192.png') }}" alt="{{ $storeName }}" width="192" height="192"
-                 class="size-14 rounded-full md:size-16">
+                 class="size-18 rounded-full md:size-20">
             {{-- The badge carries its own wordmark, so the name is a companion, not a repeat. --}}
             <span class="max-w-[38vw] truncate text-lg font-extrabold tracking-tight text-stone-900">{{ $storeName }}</span>
         </a>

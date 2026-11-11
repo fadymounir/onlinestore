@@ -6,6 +6,7 @@ use App\Models\Setting;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
@@ -15,11 +16,14 @@ use Filament\Schemas\Components\Actions as SchemaActions;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\EmbeddedSchema;
 use Filament\Schemas\Components\Form;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\HtmlString;
 use UnitEnum;
 
 /**
@@ -129,12 +133,15 @@ class ManageSettings extends Page
                 ->rows(3)
                 ->columnSpanFull(),
 
-            'image' => FileUpload::make($setting->key)
-                ->label($setting->label)
-                ->image()
-                ->imageEditor()
-                ->directory('settings')
-                ->disk('public'),
+            'image' => Group::make([
+                $this->inEffect($setting),
+                FileUpload::make($setting->key)
+                    ->label($setting->label)
+                    ->image()
+                    ->imageEditor()
+                    ->directory('settings')
+                    ->disk('public'),
+            ])->columnSpanFull(),
 
             'json' => Textarea::make($setting->key)
                 ->label($setting->label)
@@ -147,6 +154,43 @@ class ManageSettings extends Page
                 ->label($setting->label)
                 ->maxLength(255),
         };
+    }
+
+    /**
+     * What an image setting is serving right now, shown above its upload box.
+     *
+     * An empty FileUpload reads as "no image", which is wrong for the logo:
+     * with nothing uploaded the storefront wears the badge bundled in
+     * public/images, so the control sits blank while the shop is anything
+     * but. This fills that silence, and only appears when the control itself
+     * is empty — once a file is uploaded the upload box previews it and a
+     * second copy would say nothing.
+     */
+    private function inEffect(Setting $setting): Placeholder
+    {
+        $isLogo = $setting->key === 'store_logo';
+
+        $url = match (true) {
+            $isLogo => Setting::logoUrl(),
+            filled($setting->value) => Storage::disk('public')->url($setting->value),
+            default => null,
+        };
+
+        $image = '<img src="'.e((string) $url).'" alt="" width="96" height="96" style="width:6rem;'
+            .'height:6rem;border-radius:9999px;object-fit:cover;background:#faf8f5;'
+            .'box-shadow:0 0 0 1px rgb(0 0 0 / 0.1)">';
+
+        $note = $isLogo
+            ? '<p style="margin-top:.5rem;font-size:.75rem;line-height:1.7;opacity:.7">'
+                .e('الشعار المرفق مع المتجر. ارفع ملفاً هنا ليحلّ محلّه في المتجر وفي أيقونة المتصفح.')
+                .'</p>'
+            : '';
+
+        return Placeholder::make($setting->key.'_in_effect')
+            ->label('المستخدم حالياً')
+            ->content(new HtmlString($image.$note))
+            ->visible(blank($setting->value) && filled($url))
+            ->columnSpanFull();
     }
 
     public function save(): void
