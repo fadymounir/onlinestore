@@ -4,21 +4,17 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Support\AdminPermissions;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\PermissionRegistrar;
 
 class RolePermissionSeeder extends Seeder
 {
     /**
-     * Permission names stay ASCII because they are code identifiers used in
-     * `$admin->can('products.create')`; everything a human reads is Arabic.
+     * The resources and abilities themselves live in AdminPermissions, which
+     * the role form reads too — a permission the seeder invented on its own
+     * would have no heading to appear under there.
      */
-    private const RESOURCES = [
-        'products', 'categories', 'brands', 'variants', 'orders',
-        'customers', 'coupons', 'reviews', 'shipping', 'settings',
-        'pages', 'admins', 'roles',
-    ];
-
     private const ABILITIES = ['view', 'create', 'update', 'delete'];
 
     /** role => [resource => abilities] | '*' for everything on that resource */
@@ -47,10 +43,8 @@ class RolePermissionSeeder extends Seeder
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        foreach (self::RESOURCES as $resource) {
-            foreach (self::ABILITIES as $ability) {
-                Permission::findOrCreate("{$resource}.{$ability}", 'admin');
-            }
+        foreach (AdminPermissions::names() as $name) {
+            Permission::findOrCreate($name, 'admin');
         }
 
         foreach (self::ROLES as $roleName => $grants) {
