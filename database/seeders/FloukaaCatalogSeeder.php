@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\AttributeType;
 use App\Models\Category;
+use App\Models\Product;
 use Illuminate\Database\Seeder;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
@@ -378,6 +379,13 @@ class FloukaaCatalogSeeder extends Seeder
         foreach (array_chunk($pivotRows, 1000) as $chunk) {
             DB::table('attribute_value_product_variant')->insert($chunk);
         }
+
+        // The variant rows went in through the query builder, so
+        // ProductVariantObserver never fired and products.total_stock is still
+        // the column default of 0 — which the storefront's published() scope
+        // reads as "sold out", hiding the whole catalogue. Recount once, now
+        // that every variant is written.
+        Product::recountStock();
 
         $this->command?->info('Variants: '.count($variantRows).' ('.count($pivotRows).' option links)');
     }
