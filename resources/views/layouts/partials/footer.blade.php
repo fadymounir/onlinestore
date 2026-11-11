@@ -9,7 +9,7 @@
     <div class="mx-auto grid max-w-7xl gap-10 px-4 py-14 text-center sm:grid-cols-2 sm:text-start {{ $footerPages->isNotEmpty() ? 'lg:grid-cols-5' : 'lg:grid-cols-4' }}">
         <div class="sm:col-span-2 lg:col-span-1">
             <div class="mb-4 flex items-center justify-center gap-2.5 sm:justify-start">
-                <img src="{{ asset('images/mark.svg') }}" alt="" width="64" height="64" class="size-10 rounded-xl">
+                <img src="{{ asset('images/logo-192.png') }}" alt="" width="192" height="192" class="size-16 rounded-full">
                 <h2 class="text-lg font-extrabold tracking-tight text-white">{{ $storeName }}</h2>
             </div>
             {{-- mx-auto so the capped width centres under the wordmark

@@ -206,10 +206,10 @@
 /* The logo breathes rather than spins: a mark that rotates reads as a
    generic throbber, and this one is the shop's badge. */
 .app-preloader__logo {
-    inline-size: 4.5rem;
-    block-size: 4.5rem;
-    /* The badge is a circle; a rounded square would frame it in its own
-       shadow. */
+    inline-size: 6.5rem;
+    block-size: 6.5rem;
+    /* The badge's own corners are transparent, so the radius is here for the
+       shadow: a square one would frame a round mark in its own glow. */
     border-radius: 999px;
     box-shadow: var(--shadow-lift);
     animation: app-preloader-breathe 1.8s ease-in-out infinite;

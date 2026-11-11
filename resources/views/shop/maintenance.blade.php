@@ -4,14 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>المتجر مغلق مؤقتاً — {{ $storeName }}</title>
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/mark.svg') }}">
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
     @vite(['resources/css/app.css'])
 </head>
 <body class="flex min-h-screen items-center justify-center bg-paper px-4 font-sans text-stone-800">
     <div class="max-w-md text-center">
-        <img src="{{ asset('images/mark.svg') }}" alt="" width="64" height="64"
-             class="mx-auto mb-5 size-28 rounded-3xl shadow-soft">
+        <img src="{{ asset('images/logo.png') }}" alt="" width="512" height="512"
+             class="mx-auto mb-6 size-40 rounded-full shadow-soft">
         <h1 class="text-2xl font-extrabold tracking-tight text-stone-900 sm:text-3xl">{{ $storeName }}</h1>
         <p class="mt-4 text-lg font-semibold">المتجر مغلق مؤقتاً للصيانة</p>
         <p class="mt-2 leading-relaxed text-stone-600">

@@ -10,10 +10,12 @@
 
     <div class="mx-auto flex max-w-7xl items-center gap-2 px-4 py-2.5 sm:gap-4 md:py-3.5">
         <a href="{{ route('home') }}" class="flex shrink-0 items-center gap-2.5">
-            {{-- The SVG, not a PNG: this is 44px here and 40px in the footer,
-                 which is exactly where a rasterised mark starts to look soft. --}}
-            <img src="{{ asset('images/mark.svg') }}" alt="{{ $storeName }}" width="64" height="64"
-                 class="size-11 rounded-2xl">
+            {{-- Sized to be read, not just noticed: the badge carries a wordmark
+                 and a ring of type, and below about 56px all of that collapses
+                 into a brown smudge. 64px from md up is 192 at 3x exactly, which
+                 is why the 192 is the right file here rather than the 512. --}}
+            <img src="{{ asset('images/logo-192.png') }}" alt="{{ $storeName }}" width="192" height="192"
+                 class="size-14 rounded-full md:size-16">
             {{-- The badge carries its own wordmark, so the name is a companion, not a repeat. --}}
             <span class="max-w-[38vw] truncate text-lg font-extrabold tracking-tight text-stone-900">{{ $storeName }}</span>
         </a>
