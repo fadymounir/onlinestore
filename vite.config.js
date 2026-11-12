@@ -6,7 +6,10 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js'],
+            // pwa.js is its own entry rather than an import of app.js: it
+            // registers the service worker and runs the install cards, none of
+            // which the storefront's AJAX layer knows or needs to know about.
+            input: ['resources/css/app.css', 'resources/js/app.js', 'resources/js/pwa.js'],
             refresh: true,
             fonts: [
                 bunny('Cairo', {

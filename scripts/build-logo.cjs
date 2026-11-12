@@ -163,9 +163,45 @@ const write = async (file, buffer) => {
     const at = (size) => sharp(badge).resize(size, size).png().toBuffer();
     const onPaper = (size) => sharp(badge).resize(size, size).flatten({ background: PAPER }).png().toBuffer();
 
+    /*
+     * A maskable icon for public/manifest.json.
+     *
+     * Android does not show an installed icon as it was given: it crops it to
+     * whatever shape the launcher uses — circle, squircle, teardrop — and the
+     * only region guaranteed to survive is the central circle of 80% of the
+     * width. A full-bleed badge like ours would therefore lose its outer ring
+     * to the crop on every device that rounds hard.
+     *
+     * So the maskable file is the badge at MASKABLE_SAFE of the canvas,
+     * centred on paper, which leaves the ring inside the safe circle and gives
+     * the launcher a filled square to cut from. The `any` icons stay the badge
+     * at full size, because that is what a browser tab and a desktop shortcut
+     * show uncropped.
+     */
+    const MASKABLE_SAFE = 0.78;
+
+    const maskable = async (size) => {
+        const inner = Math.round(size * MASKABLE_SAFE);
+        const pad = Math.round((size - inner) / 2);
+
+        return sharp({
+            create: {
+                width: size,
+                height: size,
+                channels: 4,
+                background: PAPER,
+            },
+        })
+            .composite([{ input: await at(inner), top: pad, left: pad }])
+            .png()
+            .toBuffer();
+    };
+
     await write('public/images/logo-192.png', await at(192));
     await write('public/images/logo.png', await onPaper(512));
     await write('public/images/apple-touch-icon.png', await onPaper(180));
+    await write('public/images/icon-maskable-192.png', await maskable(192));
+    await write('public/images/icon-maskable-512.png', await maskable(512));
 
     // The .ico, assembled by hand: sharp writes no ICO, but every browser
     // since IE11 reads PNG-encoded entries, so the file is a 6-byte header,

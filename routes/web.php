@@ -9,10 +9,13 @@ use App\Http\Controllers\Shop\CartController;
 use App\Http\Controllers\Shop\CatalogController;
 use App\Http\Controllers\Shop\CheckoutController;
 use App\Http\Controllers\Shop\HomeController;
+use App\Http\Controllers\Shop\OfflineController;
 use App\Http\Controllers\Shop\PageController;
 use App\Http\Controllers\Shop\ProductController;
 use App\Http\Controllers\Shop\WishlistController;
 use App\Http\Middleware\AddressesGate;
+use App\Http\Middleware\ShareStorefrontData;
+use App\Http\Middleware\StorefrontGate;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -30,6 +33,20 @@ Route::get('/product/{product:slug}', [ProductController::class, 'show'])->name(
 // Admin-authored content: about, privacy, terms. Kept under a /page prefix
 // rather than at the root so a new page can never shadow a real route.
 Route::get('/page/{page:slug}', [PageController::class, 'show'])->name('page');
+
+/*
+ * The page public/sw.js shows when the network is unreachable.
+ *
+ * Both storefront middlewares stand down. StorefrontGate would answer with the
+ * maintenance page during maintenance, and the worker precaches whatever this
+ * URL returns — one install during a maintenance window would pin "closed for
+ * maintenance" onto that phone as its permanent offline screen.
+ * ShareStorefrontData is dropped because the view extends no layout and wants
+ * none of it, and because its data is per-visitor.
+ */
+Route::get('/offline', OfflineController::class)
+    ->name('offline')
+    ->withoutMiddleware([StorefrontGate::class, ShareStorefrontData::class]);
 
 // Cart works for guests (session) and customers (database) alike.
 Route::prefix('cart')->name('cart.')->group(function () {

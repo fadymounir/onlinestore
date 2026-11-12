@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Console\Commands\BuildPwaManifest;
 use App\Models\Setting;
 use BackedEnum;
 use Database\Seeders\SettingSeeder;
@@ -241,9 +242,39 @@ class ManageSettings extends Page
             }
         });
 
+        $this->writeWebManifest();
+
         Notification::make()
             ->title('تم حفظ الإعدادات')
             ->success()
+            ->send();
+    }
+
+    /**
+     * Keeps public/manifest.json in step with the shop's name.
+     *
+     * That file is what a phone reads when the storefront is installed to a
+     * home screen, so the name in it is the name under the icon. It is a
+     * static file — a manifest is fetched without the page's cookies and has
+     * to stay readable when PHP is not — which means a rename here has to be
+     * written through to disk, or the installed app keeps the old name for
+     * good.
+     *
+     * A failure is reported but not thrown: the settings are already saved by
+     * the time this runs, and public/ being read-only on a locked-down deploy
+     * is not a reason to tell an admin their edit did not take. `php artisan
+     * pwa:manifest` catches it up once the file is writable.
+     */
+    private function writeWebManifest(): void
+    {
+        if (@file_put_contents(BuildPwaManifest::path(), BuildPwaManifest::build()) !== false) {
+            return;
+        }
+
+        Notification::make()
+            ->title('تعذّر تحديث ملف التطبيق (manifest.json)')
+            ->body('الإعدادات محفوظة، لكن اسم التطبيق المثبّت لن يتغيّر حتى يصبح مجلد public قابلاً للكتابة.')
+            ->warning()
             ->send();
     }
 }

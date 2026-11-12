@@ -44,7 +44,7 @@
     "src": "_fonts-D6mCdkib.css"
   },
   "resources/css/app.css": {
-    "file": "assets/app-DLdvAS4N.css",
+    "file": "assets/app-BYUx67ji.css",
     "name": "app",
     "names": [
       "app.css"
@@ -56,6 +56,12 @@
     "file": "assets/app-BZsCNmre.js",
     "name": "app",
     "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/pwa.js": {
+    "file": "assets/pwa-Bf03T1MH.js",
+    "name": "pwa",
+    "src": "resources/js/pwa.js",
     "isEntry": true
   }
 }

@@ -29,6 +29,10 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <!-- Keeps a settings-page test from rewriting the committed
+             public/manifest.json with whatever shop name it invented.
+             See config/pwa.php. -->
+        <env name="PWA_MANIFEST_PATH" value="storage/framework/testing/manifest.json"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

@@ -16,14 +16,19 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{-- viewport-fit=cover: installed on a phone there is no browser chrome
+         left to keep the page off the notch and the home indicator, so the
+         page takes the whole screen and the safe-area insets — which the
+         mobile bar and the install cards already read — become real. --}}
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', $storeName) — {{ $storeName }}</title>
     <meta name="description" content="@yield('description', $storeTagline)">
     <meta name="theme-color" content="#1c1917">
     @include('layouts.partials.favicons')
+    @include('layouts.partials.pwa')
     <meta property="og:image" content="{{ asset('images/logo.png') }}">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/pwa.js'])
     {{-- The loader below is hidden until this line runs, so a visitor without
          JavaScript never meets a screen nothing will take away. --}}
     <script>document.documentElement.classList.add('js')</script>
@@ -78,6 +83,12 @@
         @include('layouts.partials.mobile-bar')
     @endif
 </div>
+
+{{-- Install and update cards. Outside every region on purpose: they are the
+     browser's business, not the page's, and an AJAX navigation must not take
+     one away mid-read. All three start hidden; resources/js/pwa.js decides
+     which — if any — this device should see. --}}
+<x-install-app />
 
 </body>
 </html>

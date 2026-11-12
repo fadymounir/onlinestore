@@ -19,6 +19,42 @@ php artisan migrate:fresh --seed
 The storefront is then on http://localhost:9000 and the panel on
 http://localhost:9000/admin.
 
+## Installing it as an app
+
+The storefront is a PWA: it installs to a phone's home screen, opens in its own
+window with no browser chrome, and shows an offline page instead of the
+browser's error page when the network drops.
+
+- **Android / Chrome / Edge** — an "تثبيت التطبيق" card appears when the
+  browser says the site is installable, and its button opens the browser's own
+  install prompt. The same card is offered on desktop Chromium.
+- **iPhone / iPad** — Safari has no install API, so after a few seconds on the
+  site a card explains the manual route: **Share → Add to Home Screen**. Do it
+  from Safari itself; Chrome and Firefox on iOS add a bookmark, not an app.
+
+Both cards can be dismissed, and stay away for a month. Any button anywhere on
+the storefront can open the install prompt by carrying `data-pwa-install`.
+
+```sh
+npm run build          # the worker precaches the built assets, so build first
+php artisan pwa:manifest   # rewrites public/manifest.json from the settings
+npm run logo               # regenerates every icon from resources/images
+```
+
+A service worker only runs on a secure origin, so installing works over
+`https://` or on `localhost` — never over plain HTTP on a LAN address.
+
+| File | What it is |
+| --- | --- |
+| `public/manifest.json` | name, icons, colours and display mode. Rewritten whenever an admin saves the settings, so the installed app is named after the shop. |
+| `public/sw.js` | the service worker. Caches only the build output, the icons and the offline page — never a page, a session or anything under `/storage`. Bump its `VERSION` when its strategies change. |
+| `resources/js/pwa.js` | registers the worker, runs the install cards, and offers the update. |
+| `resources/views/shop/offline.blade.php` | the offline page, at `/offline`. |
+
+When a new worker is deployed, visitors are shown a "يتوفر إصدار جديد" card
+rather than being swapped over mid-session; pressing **تحديث الآن** activates
+the new version and reloads.
+
 ---
 
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
